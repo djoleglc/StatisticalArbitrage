@@ -99,7 +99,7 @@ def applyStrategyRolling(df_beta,df_price, trading_window_day = 1, frequency = "
     decision_trading_day = []
     #used only to initialize the for
     end_date = df_beta.index[0] - datetime.timedelta(days=1)
-    last_start_date = df_beta.index[-2] - datetime.timedelta(days = 1)
+    last_start_date = df_beta.index[-2] - datetime.timedelta(days = trading_window_day)
     
     for j,t in enumerate(df_beta.index):
        # if t <= last_start_date:
