@@ -7,7 +7,7 @@ import numpy as np
 from dataclasses import dataclass, asdict
 import matplotlib.pyplot as plt
 import numpy_ext as npe
-from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import adfuller, zivot_andrews
 
 @dataclass
 class ResultLR:
@@ -19,13 +19,18 @@ class ResultLR:
     stationarity_pvalue: float
 
 
-def p_value_Stationary(x):
-    test = adfuller(x)
-    p_val = test[1]
+def p_value_Stationary(x, stat_test = "adfuller"):
+    if stat_test == "adfuller":
+        test = adfuller(x, autolag = "AIC")
+        p_val = test[1]
+    if stat_test == "zivot_andrews":
+        test = zivot_andrews(x, autolag = "AIC")
+        p_val = test[1]
+    
     return p_val
 
 
-def linearRegression_np(x, y):
+def linearRegression_np(x, y, stat_test = "adfuller"):
     """
     function that fits a linear regression and return several objects:
     Inputs:
@@ -47,7 +52,7 @@ def linearRegression_np(x, y):
     residuals = y.flatten() - pred.flatten()
     res_std = np.std(residuals)
     res_mean = np.mean(residuals)
-    p_val = p_value_Stationary(residuals)
+    p_val = p_value_Stationary(residuals, stat_test = stat_test)
 
     result = ResultLR(
         mod.coef_.item(), mod.intercept_.item(), r2, res_std, res_mean, p_val
@@ -80,4 +85,5 @@ def ResultDataFrame(result, index_input):
         na_dict_list + [asdict(s) for s in result[index]]
     )
     df_result = df_result.set_index(index_input)
+    df_result["date_est"] = df_result.index
     return df_result
