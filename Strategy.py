@@ -51,6 +51,7 @@ def apply_twosigma(
     start_date,
     end_date,
     fee_rate=0.1 / 100,
+    quantile = 2
 ):
     """
     function to apply a simple two sigma strategy
@@ -77,6 +78,8 @@ def apply_twosigma(
                 last day of the trading period
         -fee_rate: float
                 fee applied for each trade expressed as a percentage of the value of the trade
+        -quantile:float 
+                two sigma uses quantile = 2 but this can be changed to an arbitrarily quantile
     Output:
         -result: ResultStrategy
                 object containing the return of each trade, the type of each trade, the enter and the exit date
@@ -84,7 +87,7 @@ def apply_twosigma(
     if end_date <= df_.index[-1]:
         df__ = df_.loc[start_date:end_date, :]
     else:
-        df__ = df.loc[start_date:, :]
+        df__ = df_.loc[start_date:, :]
 
     df = pd.DataFrame(
         df__.loc[:, asset_name_1] - beta * df__.loc[:, asset_name_2],
@@ -98,13 +101,13 @@ def apply_twosigma(
 
     for j, t in enumerate(df.index[:-1]):
         if state == 0:
-            if df.loc[t, "spread"] > intercept + (2 * sigma):
+            if df.loc[t, "spread"] > intercept + (quantile * sigma):
                 # here we SHORT
                 state = -1
                 enter_pos_date = df.index[j + 1]
                 result.enter_.append(enter_pos_date)
 
-            if df.loc[t, "spread"] < intercept + (-2 * sigma):
+            if df.loc[t, "spread"] < intercept + (-quantile * sigma):
                 # here we go LONG
                 state = 1
                 enter_pos_date = df.index[j + 1]
@@ -149,7 +152,7 @@ def apply_twosigma(
     return result
 
 
-def applyStrategyRolling(df_beta, df_price, trading_window_day=1, thr_pval=0.10):
+def applyStrategyRolling(df_beta, df_price, trading_window, thr_pval=0.10, quantile = 2, fee_rate = 0.1/100):
     """
     function that applies the two sigma strategy
     Inputs:
@@ -157,8 +160,8 @@ def applyStrategyRolling(df_beta, df_price, trading_window_day=1, thr_pval=0.10)
                 dataframe containing the beta, the intercept, the residuals mean and standard deviation, the r2 and the p value connected to the adfuller test from the linear regression
         -df_price: pd.DataFrame
                 dataframe containing the price of the two assets considered
-        -trading_window_day: float
-                length of the trading window expressed in day
+        -trading_window: dict
+                dictionary containing inputs for datetime.timedelta, e.g {"hours":1, "minutes": 50..}
         -thr_pval: float
                 threshold for the adfuller test pvalue used to assess if a signal can be used
     Outputs:
@@ -174,14 +177,15 @@ def applyStrategyRolling(df_beta, df_price, trading_window_day=1, thr_pval=0.10)
     decision_trading_day = []
     # used only to initialize the for
     end_date = df_beta.index[0] - datetime.timedelta(days=1)
-    last_start_date = df_beta.index[-2] - datetime.timedelta(days=trading_window_day)
+    delta_time = datetime.timedelta(**trading_window)
+    last_start_date = df_beta.index[-2] - delta_time
 
     for j, t in enumerate(df_beta.index):
         row = df_beta.loc[t, :]
         if row.stationarity_pvalue <= thr_pval and t > end_date:
             decision_trading_day.append(row)
             init_date = df_beta.index[j + 1]
-            end_date = init_date + datetime.timedelta(days=trading_window_day)
+            end_date = init_date + delta_time
 
             strat = apply_twosigma(
                 df_price,
@@ -192,6 +196,8 @@ def applyStrategyRolling(df_beta, df_price, trading_window_day=1, thr_pval=0.10)
                 sigma=row.res_std,
                 start_date=init_date,
                 end_date=end_date,
+                fee_rate = fee_rate,
+                quantile = quantile
             )
             stratResult.append(strat)
 
@@ -222,3 +228,4 @@ def strategyDataFrame(result_strategy):
 
     df_trades = pd.DataFrame(to_dataframe)
     return df_trades
+
