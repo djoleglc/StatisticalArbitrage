@@ -10,6 +10,8 @@ import datetime
 class ResultStrategy:
     ret_: List
     ret_type: List
+    spread_enter: List
+    spread_exit: List
     enter_: List
     exit_: List
 
@@ -96,7 +98,7 @@ def apply_twosigma(
     )
 
     state = 0  # initial state
-    result = ResultStrategy([], [], [], [])
+    result = ResultStrategy([], [], [], [],[],[])
     isFinaltime = lambda j: (j == len(df) - 2)
 
     for j, t in enumerate(df.index[:-1]):
@@ -105,12 +107,14 @@ def apply_twosigma(
                 # here we SHORT
                 state = -1
                 enter_pos_date = df.index[j + 1]
+                result.spread_enter.append(df.loc[df.index[j+1], "spread"])
                 result.enter_.append(enter_pos_date)
 
             if df.loc[t, "spread"] < intercept + (-quantile * sigma):
                 # here we go LONG
                 state = 1
                 enter_pos_date = df.index[j + 1]
+                result.spread_enter.append(df.loc[df.index[j+1], "spread"])
                 result.enter_.append(enter_pos_date)
 
         elif (state == -1 and df.loc[t, "spread"] <= intercept) or (
@@ -128,6 +132,7 @@ def apply_twosigma(
                 + 1
             )
             result.ret_.append(return_)
+            result.spread_exit.append(df.loc[t_, "spread"])
             result.ret_type.append("Short")
             result.exit_.append(t_)
 
@@ -146,6 +151,7 @@ def apply_twosigma(
                 + 1
             )
             result.ret_.append(return_)
+            result.spread_exit.append(df.loc[t_, "spread"])
             result.exit_.append(t_)
             result.ret_type.append("Long")
 
@@ -228,4 +234,3 @@ def strategyDataFrame(result_strategy):
 
     df_trades = pd.DataFrame(to_dataframe)
     return df_trades
-
