@@ -15,8 +15,47 @@ class ResultStrategy:
     spread_exit: List
     fee_enter: List
     fee_exit: List
+    borrow_fee: List
     enter_: List
     exit_: List
+        
+borrowCost_dict = {
+    """
+    daily margin borrow interest from Binance
+    """
+    
+    "ADAU" : 0.024500/100,
+    "BNB"  : 0.300000/100,
+    "BTC"  : 0.005699/100,
+    "DOGE" : 0.023200/100,
+    "ETH"  : 0.005699/100,
+    "SOL"  : 0.109589/100,
+    "XRP"  : 0.017000/100
+}
+        
+def borrowCost(df_, short_asset_name, enter_date, exit_date, beta = 1):
+    """
+    function used to calculate the borrowing costs when shorting an asset
+    Inputs:
+        - df_: pd.DataFrame
+                dataframe containing the price for the two assets considered
+        - short_asset_name: str
+                name of the asset which is shorted
+        - enter_date: TimeStamp
+                date when short position was entered
+        - exit_date: TimeStamp
+                date when short positioned was exited
+        - beta: float
+                amount of assets which are shorted (by default, only one asset is shorted)
+    Output:
+        - feeToPay: float
+                borrowing fee to pay
+    """
+    daily_interest = borrowCost_dict[short_asset_name]
+    time_delta = exit_date - enter_date
+    hours_borrowed = numpy.ceil(time_delta.total_seconds() / 60 / 60)
+    amount_borrowed = df_.loc[enter_date, short_asset_name]
+    return daily_interest / 24 * hours_borrowed * amount_borrowed
 
 
 def transactionCost(df_, asset_name_1, asset_name_2, beta, t, fee=0.1 / 100):
@@ -101,7 +140,7 @@ def apply_twosigma(
     )
 
     state = 0  # initial state
-    result = ResultStrategy([], [], [], [], [], [], [], [], [])
+    result = ResultStrategy([], [], [], [], [], [], [], [], [], [])
     isFinaltime = lambda j: (j == len(df) - 2)
 
     for j, t in enumerate(df.index[:-1]):
@@ -143,6 +182,14 @@ def apply_twosigma(
         ):
             state = 0
             t_ = df.index[j + 1]
+            
+            borrow_fee = borrowCost(
+                    df__,
+                    asset_name_1,
+                    enter_pos_date,
+                    t_
+                )
+            
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
@@ -154,11 +201,13 @@ def apply_twosigma(
             )
 
             return_ = (
-                (-fee_enter / df.loc[enter_pos_date, "spread"])
+                (-borrow_fee / df.loc[enter_pos_date, "spread"])
+                + (-fee_enter / df.loc[enter_pos_date, "spread"])
                 + (-fee_exit / df.loc[enter_pos_date, "spread"])
                 + return_no_fee
             )
-
+            
+            result.borrow_fee.append(borrow_fee)
             result.fee_exit.append(fee_exit)
             result.ret_.append(return_)
             result.ret_no_fee.append(return_no_fee)
@@ -171,6 +220,15 @@ def apply_twosigma(
         ):
             state = 0
             t_ = df.index[j + 1]
+            
+            borrow_fee = borrowCost(
+                    df__,
+                    asset_name_2,
+                    enter_pos_date,
+                    t_,
+                    beta
+                )
+            
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
@@ -179,11 +237,13 @@ def apply_twosigma(
                 df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"]
             ) / df.loc[enter_pos_date, "spread"] + 1
             return_ = (
-                (-fee_enter / df.loc[enter_pos_date, "spread"])
+                (-borrow_fee / df.loc[enter_pos_date, "spread"])
+                + (-fee_enter / df.loc[enter_pos_date, "spread"])
                 + (-fee_exit / df.loc[enter_pos_date, "spread"])
                 + return_no_fee
             )
-
+            
+            result.borrow_fee.append(borrow_fee)
             result.ret_.append(return_)
             result.fee_exit.append(fee_exit)
             result.spread_exit.append(df.loc[t_, "spread"])
