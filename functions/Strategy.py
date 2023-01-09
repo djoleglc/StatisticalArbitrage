@@ -3,7 +3,7 @@ from typing import List
 import pandas
 import numpy
 import pandas as pd
-from functions.Marginfee import gwtMarginRate
+from functions.MarginFee import gwtMarginRate
 import datetime
 
 
