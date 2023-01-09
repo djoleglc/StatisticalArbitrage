@@ -3,7 +3,6 @@ from typing import List
 import pandas
 import numpy
 import pandas as pd
-from functions.MarginFee import getMarginRate
 import datetime
 
 
@@ -29,7 +28,7 @@ borrowCost_dict = {
     "BNB"  : 0.300000/100,
     "BTC"  : 0.005699/100,
     "DOGE" : 0.023200/100,
-    "ETH"  : 0.005699/100,
+    #"ETH"  : 0.005699/100,
     "SOL"  : 0.109589/100,
     "XRP"  : 0.017000/100
 }
@@ -274,14 +273,12 @@ def applyStrategyRolling(
                 list containing ResultStrategy objects
         -decision_trading_day: list
                 list containing information about the day in which a signal is observed and used for trading
-
     """
     y_name = df_price.columns[1]
     x_name = df_price.columns[0]
-    if x_name not in borrowCost_dict:
-        borrowCost_dict[x_name] = getMarginRate(x_name)
-    if y_name not in borrowCost_dict:
-        borrowCost_dict[x_name] = getMarginRate(y_name)
+    if x_name not in borrowCost_dict or  y_name not in borrowCost_dict:
+        raise  Warning("Margin Fee not available for this Ticker")
+   
         
     stratResult = []
     decision_trading_day = []
