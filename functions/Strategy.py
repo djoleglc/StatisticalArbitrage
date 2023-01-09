@@ -3,6 +3,7 @@ from typing import List
 import pandas
 import numpy
 import pandas as pd
+from functions.Marginfee import gwtMarginRate
 import datetime
 
 
@@ -277,6 +278,11 @@ def applyStrategyRolling(
     """
     y_name = df_price.columns[1]
     x_name = df_price.columns[0]
+    if x_name not in borrowCost_dict:
+        borrowCost_dict[x_name] = getMarginRate(x_name)
+    if y_name not in borrowCost_dict:
+        borrowCost_dict[x_name] = getMarginRate(y_name)
+        
     stratResult = []
     decision_trading_day = []
     # used only to initialize the for
