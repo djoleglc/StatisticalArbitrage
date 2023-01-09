@@ -92,7 +92,7 @@ def downloadmoveFile(name, date, folder = "H:"):
     
     
 
-def downloadList(name, dates, parallel=True, n_job=2):
+def downloadList(name, dates, folder = "H:", parallel=True, n_job=2):
     """
     Function to download a list of dates files using Parallelization
     Inputs:
@@ -102,10 +102,12 @@ def downloadList(name, dates, parallel=True, n_job=2):
                 list with the dates to download, single date must have the following syntax: "2021-01"
         -parallel: bool
                 boolean variable that describe if parallelization must be used
+        -folder: str
+                folder to store the file
         -n_job: int
                 number of cores to use
     """
-    fun_ = lambda date: downloadmoveFile(name, date)
+    fun_ = lambda date: downloadmoveFile(name, date, folder)
     if parallel:
         Pool(n_job).map(fun_, dates)
         return "Completed"
