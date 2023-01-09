@@ -24,14 +24,12 @@ def nameFile(ticker, date, folder):
     return path
 
 
-def modifyDataFrame(x, frequency):
+def modifyDataFrame(x):
     """
     function to modify a dataframe and to keep only the price
     Inputs:
         -x: list or tuple
                 list or tuple containing the name of the asset to load and its path
-        -frequency: str
-                pandas frequency to use to resample the dataset
     Output:
         -df: pd.DataFrame
                 dataframe containing the price of the given asset
@@ -80,7 +78,6 @@ def createDataFrame(
     input_folder,
     date,
     tickers,
-    frequency,
     n_job=4,
     to_save=False,
     output_name=None,
@@ -95,8 +92,6 @@ def createDataFrame(
                 date for which create the dataframe
         -tickers: list of str
                 list of assets name, e.g. ["ETH", "BTC"]
-        -frequency: str
-                pandas frequency used to resample the data
         -n_job: int
                 cores used to parallelize the operations
         -to_save: bool
@@ -111,7 +106,7 @@ def createDataFrame(
 
     """
     paths = [nameFile(ticker, date, input_folder) for ticker in tickers]
-    fun = lambda x: modifyDataFrame(x, frequency)
+    fun = lambda x: modifyDataFrame(x)
     dfs = Pool(n_job).map(fun, zip(tickers, paths))
     df = reduce(
         lambda x, h: pd.merge(x, h, right_index=True, left_index=True, how="outer"), dfs
