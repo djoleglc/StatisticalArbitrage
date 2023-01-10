@@ -4,7 +4,7 @@ import pandas
 import numpy
 import pandas as pd
 import datetime
-
+#giovanni
 
 @dataclass
 class ResultStrategy:
