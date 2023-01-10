@@ -36,8 +36,7 @@ def getMarginRate(driver, name):
     return rate
   
   
-  
-  def getDictionaryMarginRate(list_names):
+def getDictionaryMarginRate(list_names):
     """
     function to retrieve a dictionary of margin fee interest rates
     Inputs:
