@@ -28,7 +28,7 @@ borrowCost_dict = {
     "BNB"  : 0.300000/100,
     "BTC"  : 0.005699/100,
     "DOGE" : 0.023200/100,
-    #"ETH"  : 0.005699/100,
+    "ETH"  : 0.005699/100,
     "SOL"  : 0.109589/100,
     "XRP"  : 0.017000/100
 }
@@ -96,6 +96,7 @@ def apply_twosigma(
     end_date,
     fee_rate=0.1 / 100,
     quantile=2,
+    stop_loss = 0.2
 ):
     """
     function to apply a simple two sigma strategy
@@ -104,26 +105,28 @@ def apply_twosigma(
     asset_one is the y in the regression
     asset_two is the x in the regression
     Inputs:
-        -df_: pd.DataFrame
+        - df_ : pd.DataFrame
                 dataframe containing the price of the two assets and with time index
-        -asset_name_1: str
+        - asset_name_1 : str
                 name of the first asset used as y in the linear regression
-        -asset_name_2: str
+        - asset_name_2 : str
                 name of the second asset used as x in the linear regression
-        -beta: float
+        - beta : float
                 linear regression coefficient
-        -intercept: float
+        - intercept : float
                 linear regression intercept coefficient
-        -sigma: float
+        - sigma : float
                 standard deviation of the linear regression residuals
-        -start_date: TimeStamp
+        - start_date : TimeStamp
                 first day of the trading period
-        -end_date: TimeStamp
+        - end_date : TimeStamp
                 last day of the trading period
-        -fee_rate: float
+        - fee_rate : float
                 fee applied for each trade expressed as a percentage of the value of the trade
-        -quantile:float
+        - quantile : float
                 two sigma uses quantile = 2 but this can be changed to an arbitrarily quantile
+        - stop_loss : float in the interval of (0,1)
+                determines the maximum loss we are willing to take before exiting the position
     Output:
         -result: ResultStrategy
                 object containing the return of each trade, the type of each trade, the enter and the exit date
@@ -177,10 +180,8 @@ def apply_twosigma(
                 result.spread_enter.append(df.loc[df.index[j + 1], "spread"])
                 result.enter_.append(enter_pos_date)
 
-        elif (state == -1 and df.loc[t, "spread"] <= intercept) or (
-            state == -1 and isFinaltime(j)
-        ):
-            state = 0
+        
+        elif state == -1:
             t_ = df.index[j + 1]
             
             borrow_fee = borrowCost(
@@ -207,18 +208,22 @@ def apply_twosigma(
                 + return_no_fee
             )
             
-            result.borrow_fee.append(borrow_fee)
-            result.fee_exit.append(fee_exit)
-            result.ret_.append(return_)
-            result.ret_no_fee.append(return_no_fee)
-            result.spread_exit.append(df.loc[t_, "spread"])
-            result.ret_type.append("Short")
-            result.exit_.append(t_)
+            if df.loc[t, "spread"] <= intercept or isFinaltime(j) or return_ <= 1 - stop_loss:
+                state = 0
+                
+                if return_ <= 1 - stop_loss:
+                    result.ret_.append(1 - stop_loss)
+                else:
+                    result.ret_.append(return_)
 
-        elif (state == 1 and df.loc[t, "spread"] >= intercept) or (
-            state == 1 and isFinaltime(j)
-        ):
-            state = 0
+                result.borrow_fee.append(borrow_fee)
+                result.fee_exit.append(fee_exit)
+                result.ret_no_fee.append(return_no_fee)
+                result.spread_exit.append(df.loc[t_, "spread"])
+                result.ret_type.append("Short")
+                result.exit_.append(t_)
+
+        elif state == 1:
             t_ = df.index[j + 1]
             
             borrow_fee = borrowCost(
@@ -236,6 +241,7 @@ def apply_twosigma(
             return_no_fee = (
                 df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"]
             ) / df.loc[enter_pos_date, "spread"] + 1
+            
             return_ = (
                 (-borrow_fee / df.loc[enter_pos_date, "spread"])
                 + (-fee_enter / df.loc[enter_pos_date, "spread"])
@@ -243,13 +249,20 @@ def apply_twosigma(
                 + return_no_fee
             )
             
-            result.borrow_fee.append(borrow_fee)
-            result.ret_.append(return_)
-            result.fee_exit.append(fee_exit)
-            result.spread_exit.append(df.loc[t_, "spread"])
-            result.exit_.append(t_)
-            result.ret_no_fee.append(return_no_fee)
-            result.ret_type.append("Long")
+            if df.loc[t, "spread"] >= intercept or isFinaltime(j) or return_ <= 1 - stop_loss:
+                state = 0
+                
+                if return_ <= 1 - stop_loss:
+                    result.ret_.append(1 - stop_loss)
+                else:
+                    result.ret_.append(return_)
+                    
+                result.borrow_fee.append(borrow_fee)
+                result.fee_exit.append(fee_exit)
+                result.spread_exit.append(df.loc[t_, "spread"])
+                result.exit_.append(t_)
+                result.ret_no_fee.append(return_no_fee)
+                result.ret_type.append("Long")
 
     return result
 
@@ -273,13 +286,10 @@ def applyStrategyRolling(
                 list containing ResultStrategy objects
         -decision_trading_day: list
                 list containing information about the day in which a signal is observed and used for trading
+
     """
     y_name = df_price.columns[1]
     x_name = df_price.columns[0]
-    if x_name not in borrowCost_dict or  y_name not in borrowCost_dict:
-        raise  Warning("Margin Fee not available for this Ticker")
-   
-        
     stratResult = []
     decision_trading_day = []
     # used only to initialize the for
