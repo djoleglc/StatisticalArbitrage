@@ -59,4 +59,12 @@ def getDictionaryMarginRate(list_names):
     driver.find_element(By.XPATH, '//*[@id="onetrust-accept-btn-handler"]').click()
     rates = dict(zip(list_names, [getMarginRate(driver, j) for j in list_names]))
     return rates
+
+
+def checkMarginFeeDict(path_dict, asset_list):
+    d = joblib.load(path_dict)
+    to_retrieve = [asset for asset in asset_list if asset not in d]
+    to_merge = getDictionaryMarginRate(to_retrieve)
+    d.update(to_merge)
+    joblib.dump(d, path_dict)
     
