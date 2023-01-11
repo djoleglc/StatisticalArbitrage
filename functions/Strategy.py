@@ -18,7 +18,101 @@ class ResultStrategy:
     borrow_fee: List
     enter_: List
     exit_: List
+
         
+def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window_days, safe_output_csv = False):
+    """
+    Input:
+        - coinf_df : pd.DataFrame
+                DataFrame with the prices of assets (coins)
+        - asset_name_1 : str
+                y variable
+        - asset_name_2 : str
+                x variable
+        - window : int
+                amount of days which determines the calibration window size
+        - safe_output_csv : bool
+                determines whether the output table should be saved as csv
+    Output:
+        - df_beta : pd.DataFrame
+               dataframe containing beta, intercept, r2, res_std, res_mean, stationarity_pvalue, date_est
+    """
+    window = calibration_window_days * 1440 #1440 is amount of seconds per day
+    index_input = coin_df.index
+    y, x = coin_df[asset_name_1].to_numpy(), coin_df[asset_name_2].to_numpy(), 
+    rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=4)
+    df_beta = ResultDataFrame(rolling, index_input[:last])
+    if safe_output_csv:
+        df_beta.to_csv(f"./df_beta_{asset_name_2}_{asset_name_1}_{calibration_window_days}_days.csv.gz")
+    return df_beta
+
+
+
+
+def getCombRet(coin_df, asset_name_1, asset_name_2, calib_trading_windows, p_values, stop_loss = 0.2, safe_beta_csv = False):
+    """
+    Input:
+        - coinf_df : pd.DataFrame
+                DataFrame with the prices of assets (coins)
+        - asset_name_1 : str
+                y variable
+        - asset_name_2 : str
+                x variable
+        - calib_trading_windows : List
+                list containing amount of days which determine the calibration/trading window size
+        - p_values : List
+                list containing the relevant p-values as a threshold for trading
+        - stop_loss : float in the interval of (0,1)
+                determines the maximum loss we are willing to take before exiting the position
+        - safe_output_csv : bool
+                determines whether the output table should be saved as csv
+    Output:
+        - ret_dict : Dictionary
+               dictionary with keys = date (e.g. "2021-01") and the respective dataframe of all 
+               combinations of p_values and calib_trading_windows
+    """
+    coin_df["Month"] = coin_df.index.to_period('M')
+    ret_dict = {}
+    for date in coin_df["Month"].unique():
+        ret_dict[str(date)] = pd.DataFrame(columns = p_values, index = calib_trading_windows)
+    
+    for window in calib_trading_windows:
+        try:
+            beta_df = pd.read_csv(f"./data/df_beta_{asset_name_2}_{asset_name_1}.csv.gz") #_{window}_days
+            beta_df = beta_df.set_index("time")
+            beta_df.index = pd.to_datetime(beta_df.index)
+            beta_df["Month"] = beta_df.index.to_period('M')
+        except:
+            beta_df = create_beta_table(coin_df, asset_name_1, asset_name_2, window, safe_beta_csv)
+            beta_df = beta_df.set_index("time")
+            beta_df.index = pd.to_datetime(beta_df.index)
+            beta_df["Month"] = beta_df.index.to_period('M')
+        
+        trading_window = {"days": window, "hours": 0, "minutes": 0}
+        
+        for date in coin_df["Month"].unique():
+            p_dict = {}
+            for p_val in p_values:
+                result_strategy = applyStrategyRolling(df_beta = beta_df.loc[beta_df.Month == date], 
+                                                       df_price = coin_df.loc[coin_df.Month == date], 
+                                                       trading_window = trading_window, 
+                                                       thr_pval = p_val, 
+                                                       quantile = 2, 
+                                                       fee_rate = 0.1 / 100, 
+                                                       stop_loss = stop_loss)
+                df_trades = strategyDataFrame(result_strategy)
+                
+                total_ret = df_trades["ret_"].prod()
+                p_dict[p_val] = total_ret
+                
+            helper_df = ret_dict[str(date)]
+            helper_df.loc[window] = (p_dict)
+            ret_dict[str(date)] = helper_df
+    
+    return ret_dict
+
+
+
 borrowCost_dict = {
     """
     daily margin borrow interest from Binance
