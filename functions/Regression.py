@@ -22,55 +22,52 @@ class ResultLR:
     stationarity_pvalue: float
 
 
-
-def HurstExponent(series, max_lag = 100):
+def HurstExponent(series, max_lag=100):
     lags = range(2, max_lag)
     tau = [sqrt(std(subtract(series[lag:], series[:-lag]))) for lag in lags]
     poly = polyfit(log(lags), log(tau), 1)
     hurst = poly[0]
     return hurst
-        
+
 
 def half_life(series):
-    adf = adfuller(series, maxlag=1, autolag='AIC', regression='c')
+    adf = adfuller(series, maxlag=1, autolag="AIC", regression="c")
     half_life = -np.log(2) / adf[0]
     return half_life
 
-    
-def p_value_Stationary(x, stat_test = "adfuller"):
+
+def p_value_Stationary(x, stat_test="adfuller"):
     if stat_test == "adfuller":
         """
         this is a normal pvalue
         """
-        test = adfuller(x, autolag = "AIC", regression = "ct")
+        test = adfuller(x, autolag="AIC", regression="ct")
         p_val = test[1]
-        
+
     if stat_test == "pp":
         """
-        philip pherron test 
-        p_val here is a p value 
+        philip pherron test
+        p_val here is a p value
         """
-        result = adfuller(x, maxlag=1, regression='c', autolag=None)
+        result = adfuller(x, maxlag=1, regression="c", autolag=None)
         p_val = result[1]
-
 
     if stat_test == "hurstexponent":
         """
         less than 0.5 is mean reverting
         """
         p_val = HurstExponent(x)
-        
+
     if stat_test == "half_life":
         """
         usually they measure it in days
         """
         p_val = half_life(x)
-        
-        
+
     return p_val
 
 
-def linearRegression_np(x, y, stat_test = "adfuller"):
+def linearRegression_np(x, y, stat_test="adfuller"):
     """
     function that fits a linear regression and return several objects:
     Inputs:
@@ -92,7 +89,7 @@ def linearRegression_np(x, y, stat_test = "adfuller"):
     residuals = y.flatten() - pred.flatten()
     res_std = np.std(residuals)
     res_mean = np.mean(residuals)
-    p_val = p_value_Stationary(residuals, stat_test = stat_test)
+    p_val = p_value_Stationary(residuals, stat_test=stat_test)
     result = ResultLR(
         mod.coef_.item(), mod.intercept_.item(), r2, res_std, res_mean, p_val
     )
@@ -135,16 +132,12 @@ def fromTimetoPlainIndex(window, frequency):
         -window: dict
                 datetime arguments dict
         -frequency: dict
-                datetime arguments dict 
-    Output: 
-        -n_obs: int 
-    
+                datetime arguments dict
+    Output:
+        -n_obs: int
+
     """
     win = dt.timedelta(**window)
     freq = dt.timedelta(**frequency)
-    n_obs = win/freq
-    return n_obs 
-
-
-
-
+    n_obs = win / freq
+    return n_obs

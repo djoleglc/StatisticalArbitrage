@@ -21,8 +21,16 @@ class ResultStrategy:
     enter_: List
     exit_: List
 
-        
-def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, frequency = {"minutes" = 1},  safe_output_csv = False, n_job = 4):
+
+def create_beta_table(
+    coin_df,
+    asset_name_1,
+    asset_name_2,
+    calibration_window,
+    frequency={"minutes": 1},
+    safe_output_csv=False,
+    n_job=4,
+):
     """
     Input:
         - coinf_df : pd.DataFrame
@@ -39,19 +47,30 @@ def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, f
         - df_beta : pd.DataFrame
                dataframe containing beta, intercept, r2, res_std, res_mean, stationarity_pvalue, date_est
     """
-    window = int(fromTimetoPlainIndex(window = calibration_window, frequency = frequency))
+    window = int(fromTimetoPlainIndex(window=calibration_window, frequency=frequency))
     index_input = coin_df.index
-    y, x = coin_df[asset_name_1].to_numpy(), coin_df[asset_name_2].to_numpy(), 
+    y, x = (
+        coin_df[asset_name_1].to_numpy(),
+        coin_df[asset_name_2].to_numpy(),
+    )
     rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=n_job)
     df_beta = ResultDataFrame(rolling, index_input[:])
     if safe_output_csv:
-        df_beta.to_csv(f"./df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days.csv.gz")
+        df_beta.to_csv(
+            f"./df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days.csv.gz"
+        )
     return df_beta
 
 
-
-
-def getCombRet(coin_df, asset_name_1, asset_name_2, calib_trading_windows, p_values, stop_loss = 0.2, safe_beta_csv = False):
+def getCombRet(
+    coin_df,
+    asset_name_1,
+    asset_name_2,
+    calib_trading_windows,
+    p_values,
+    stop_loss=0.2,
+    safe_beta_csv=False,
+):
     """
     Input:
         - coinf_df : pd.DataFrame
@@ -70,68 +89,73 @@ def getCombRet(coin_df, asset_name_1, asset_name_2, calib_trading_windows, p_val
                 determines whether the output table should be saved as csv
     Output:
         - ret_dict : Dictionary
-               dictionary with keys = date (e.g. "2021-01") and the respective dataframe of all 
+               dictionary with keys = date (e.g. "2021-01") and the respective dataframe of all
                combinations of p_values and calib_trading_windows
     """
-    coin_df["Month"] = coin_df.index.to_period('M')
+    coin_df["Month"] = coin_df.index.to_period("M")
     ret_dict = {}
     index_windows = [datetime.timedelta(**window) for window in calib_trading_windows]
     for date in coin_df["Month"].unique():
-        ret_dict[str(date)] = pd.DataFrame(columns = p_values, index = index_windows)
-    
+        ret_dict[str(date)] = pd.DataFrame(columns=p_values, index=index_windows)
+
     for window in calib_trading_windows:
-    idx_window = datetime.timedelta(**window)
+        idx_window = datetime.timedelta(**window)
         try:
-            beta_df = pd.read_csv(f"./data/df_beta_{asset_name_2}_{asset_name_1}.csv.gz") #_{window}_days
+            beta_df = pd.read_csv(
+                f"./data/df_beta_{asset_name_2}_{asset_name_1}.csv.gz"
+            )  # _{window}_days
             beta_df = beta_df.set_index("time")
             beta_df.index = pd.to_datetime(beta_df.index)
-            beta_df["Month"] = beta_df.index.to_period('M')
+            beta_df["Month"] = beta_df.index.to_period("M")
         except:
-            beta_df = create_beta_table(coin_df, asset_name_1, asset_name_2, window, safe_beta_csv)
+            beta_df = create_beta_table(
+                coin_df, asset_name_1, asset_name_2, window, safe_beta_csv
+            )
             beta_df = beta_df.set_index("time")
             beta_df.index = pd.to_datetime(beta_df.index)
-            beta_df["Month"] = beta_df.index.to_period('M')
-        
+            beta_df["Month"] = beta_df.index.to_period("M")
+
         trading_window = {"days": window, "hours": 0, "minutes": 0}
-        
+
         for date in coin_df["Month"].unique():
             p_dict = {}
             for p_val in p_values:
-                result_strategy = applyStrategyRolling(df_beta = beta_df.loc[beta_df.Month == date], 
-                                                       df_price = coin_df.loc[coin_df.Month == date], 
-                                                       trading_window = trading_window, 
-                                                       thr_pval = p_val, 
-                                                       quantile = 2, 
-                                                       fee_rate = 0.1 / 100, 
-                                                       stop_loss = stop_loss)
+                result_strategy = applyStrategyRolling(
+                    df_beta=beta_df.loc[beta_df.Month == date],
+                    df_price=coin_df.loc[coin_df.Month == date],
+                    trading_window=trading_window,
+                    thr_pval=p_val,
+                    quantile=2,
+                    fee_rate=0.1 / 100,
+                    stop_loss=stop_loss,
+                )
                 df_trades = strategyDataFrame(result_strategy)
-                
+
                 total_ret = df_trades["ret_"].prod()
                 p_dict[p_val] = total_ret
-                
-            helper_df = ret_dict[str(date)]
-            helper_df.loc[idx_window] = (p_dict)
-            ret_dict[str(date)] = helper_df
-    
-    return ret_dict
 
+            helper_df = ret_dict[str(date)]
+            helper_df.loc[idx_window] = p_dict
+            ret_dict[str(date)] = helper_df
+
+    return ret_dict
 
 
 borrowCost_dict = {
     """
     daily margin borrow interest from Binance
     """
-    
-    "ADAU" : 0.024500/100,
-    "BNB"  : 0.300000/100,
-    "BTC"  : 0.005699/100,
-    "DOGE" : 0.023200/100,
-    "ETH"  : 0.005699/100,
-    "SOL"  : 0.109589/100,
-    "XRP"  : 0.017000/100
+    "ADAU": 0.024500 / 100,
+    "BNB": 0.300000 / 100,
+    "BTC": 0.005699 / 100,
+    "DOGE": 0.023200 / 100,
+    "ETH": 0.005699 / 100,
+    "SOL": 0.109589 / 100,
+    "XRP": 0.017000 / 100,
 }
-        
-def borrowCost(df_, short_asset_name, enter_date, exit_date, beta = 1):
+
+
+def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
     """
     function used to calculate the borrowing costs when shorting an asset
     Inputs:
@@ -194,7 +218,7 @@ def apply_twosigma(
     end_date,
     fee_rate=0.1 / 100,
     quantile=2,
-    stop_loss = 0.2
+    stop_loss=0.2,
 ):
     """
     function to apply a simple two sigma strategy
@@ -278,17 +302,11 @@ def apply_twosigma(
                 result.spread_enter.append(df.loc[df.index[j + 1], "spread"])
                 result.enter_.append(enter_pos_date)
 
-        
         elif state == -1:
             t_ = df.index[j + 1]
-            
-            borrow_fee = borrowCost(
-                    df__,
-                    asset_name_1,
-                    enter_pos_date,
-                    t_
-                )
-            
+
+            borrow_fee = borrowCost(df__, asset_name_1, enter_pos_date, t_)
+
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
@@ -305,10 +323,14 @@ def apply_twosigma(
                 + (-fee_exit / df.loc[enter_pos_date, "spread"])
                 + return_no_fee
             )
-            
-            if df.loc[t, "spread"] <= intercept or isFinaltime(j) or return_ <= 1 - stop_loss:
+
+            if (
+                df.loc[t, "spread"] <= intercept
+                or isFinaltime(j)
+                or return_ <= 1 - stop_loss
+            ):
                 state = 0
-                
+
                 if return_ <= 1 - stop_loss:
                     result.ret_.append(1 - stop_loss)
                 else:
@@ -323,15 +345,9 @@ def apply_twosigma(
 
         elif state == 1:
             t_ = df.index[j + 1]
-            
-            borrow_fee = borrowCost(
-                    df__,
-                    asset_name_2,
-                    enter_pos_date,
-                    t_,
-                    beta
-                )
-            
+
+            borrow_fee = borrowCost(df__, asset_name_2, enter_pos_date, t_, beta)
+
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
@@ -339,22 +355,26 @@ def apply_twosigma(
             return_no_fee = (
                 df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"]
             ) / df.loc[enter_pos_date, "spread"] + 1
-            
+
             return_ = (
                 (-borrow_fee / df.loc[enter_pos_date, "spread"])
                 + (-fee_enter / df.loc[enter_pos_date, "spread"])
                 + (-fee_exit / df.loc[enter_pos_date, "spread"])
                 + return_no_fee
             )
-            
-            if df.loc[t, "spread"] >= intercept or isFinaltime(j) or return_ <= 1 - stop_loss:
+
+            if (
+                df.loc[t, "spread"] >= intercept
+                or isFinaltime(j)
+                or return_ <= 1 - stop_loss
+            ):
                 state = 0
-                
+
                 if return_ <= 1 - stop_loss:
                     result.ret_.append(1 - stop_loss)
                 else:
                     result.ret_.append(return_)
-                    
+
                 result.borrow_fee.append(borrow_fee)
                 result.fee_exit.append(fee_exit)
                 result.spread_exit.append(df.loc[t_, "spread"])
@@ -366,7 +386,13 @@ def apply_twosigma(
 
 
 def applyStrategyRolling(
-    df_beta, df_price, trading_window, thr_pval=0.10, quantile=2, fee_rate=0.1 / 100, stop_loss = 0.2
+    df_beta,
+    df_price,
+    trading_window,
+    thr_pval=0.10,
+    quantile=2,
+    fee_rate=0.1 / 100,
+    stop_loss=0.2,
 ):
     """
     function that applies the two sigma strategy
@@ -413,7 +439,7 @@ def applyStrategyRolling(
                 end_date=end_date,
                 fee_rate=fee_rate,
                 quantile=quantile,
-                stop_loss = stop_loss
+                stop_loss=stop_loss,
             )
             stratResult.append(strat)
 

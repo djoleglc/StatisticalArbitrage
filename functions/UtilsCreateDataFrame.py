@@ -36,10 +36,10 @@ def modifyDataFrame(x):
     """
     name, path = x[0], x[1]
     df_ = LoadDataset(path)
-    df_[name] = df_.close*0.5 +df_.open*0.5 
-    df = pd.DataFrame( df_[name] )
-   # df = df.rename(columns={"price": name})
-   # df = df.resample(frequency).last()
+    df_[name] = df_.close * 0.5 + df_.open * 0.5
+    df = pd.DataFrame(df_[name])
+    # df = df.rename(columns={"price": name})
+    # df = df.resample(frequency).last()
     return df
 
 
@@ -80,7 +80,7 @@ def createDataFrame(
     tickers,
     n_job=4,
     to_save=False,
-    parallel = True,
+    parallel=True,
     output_name=None,
     output_folder=None,
 ):
@@ -108,11 +108,11 @@ def createDataFrame(
     """
     paths = [nameFile(ticker, date, input_folder) for ticker in tickers]
     fun = lambda x: modifyDataFrame(x)
-    if parallel:        
+    if parallel:
         dfs = Pool(n_job).map(fun, zip(tickers, paths))
     else:
-        dfs = [fun(x) for x in zip(tickers,paths)]
-        
+        dfs = [fun(x) for x in zip(tickers, paths)]
+
     df = reduce(
         lambda x, h: pd.merge(x, h, right_index=True, left_index=True, how="outer"), dfs
     )
@@ -122,13 +122,14 @@ def createDataFrame(
 
 
 def createUniqueDataFrame(
-    list_dates, 
+    list_dates,
     input_folder,
     tickers,
     n_job=4,
     to_save=False,
     output_name=None,
-    output_folder=None):
+    output_folder=None,
+):
 
     fun_ = lambda date: createDataFrame(
         input_folder=input_folder,
@@ -149,4 +150,3 @@ def loadCleanDataFrame(path):
     df_ = df_.set_index(pd.to_datetime(df_.time))
     df_.drop(columns=["time"], inplace=True)
     return df_
-

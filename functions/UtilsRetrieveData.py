@@ -50,32 +50,31 @@ def downloadFile(name, date):
         -date: str
                 date to download date must have the following syntax: "2021-01"
     """
-    directory = os.getcwd() 
+    directory = os.getcwd()
     filename = f"{directory}\\{name}-1m-{date}.zip"
     url = f"https://data.binance.vision/data/spot/monthly/klines/{name}/1m/{name}-1m-{date}.zip"
     wget.download(url)
     return filename
-    
 
-    
+
 def moveFile(filename, name, date, folder):
     """
-    Function to move a file 
+    Function to move a file
     Inputs:
         -filename: str
-                path of the file to move 
+                path of the file to move
         -name: str
                 name of the currency of the file to move
         -date: str
-                date of the file to move 
+                date of the file to move
         -folder: str
                 name of the folder to store the data, e.g. 'H'
-           
+
     """
     shutil.move(filename, f"{folder}\\{name}-1m-{date}.zip")
 
-    
-def downloadmoveFile(name, date, folder = "H:"):
+
+def downloadmoveFile(name, date, folder="H:"):
     """
     Function to download and move a file
     Inputs:
@@ -88,11 +87,9 @@ def downloadmoveFile(name, date, folder = "H:"):
     """
     filename = downloadFile(name, date)
     moveFile(filename, name, date, folder)
-    
-    
-    
 
-def downloadList(name, dates, folder = "H:", parallel=True, n_job=2):
+
+def downloadList(name, dates, folder="H:", parallel=True, n_job=2):
     """
     Function to download a list of dates files using Parallelization
     Inputs:
