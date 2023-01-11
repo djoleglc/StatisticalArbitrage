@@ -21,7 +21,7 @@ class ResultStrategy:
     exit_: List
 
         
-def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, frequency = {"minutes" = 1},  safe_output_csv = False):
+def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, frequency = {"minutes" = 1},  safe_output_csv = False, n_job = 4):
     """
     Input:
         - coinf_df : pd.DataFrame
@@ -41,7 +41,7 @@ def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, f
     window = int(fromTimetoPlainIndex(window = calibration_window, frequency = frequency))
     index_input = coin_df.index
     y, x = coin_df[asset_name_1].to_numpy(), coin_df[asset_name_2].to_numpy(), 
-    rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=4)
+    rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=n_job)
     df_beta = ResultDataFrame(rolling, index_input[:last])
     if safe_output_csv:
         df_beta.to_csv(f"./df_beta_{asset_name_2}_{asset_name_1}_{calibration_window_days}_days.csv.gz")
