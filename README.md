@@ -6,5 +6,5 @@ Datasets are available at: https://drive.google.com/drive/folders/1je9SfdxHSQwvV
 - Joshua Voelkel: joshua.voelkel@epfl.ch 
 
 ## Retrieve Data
-- `RetrieveData.ipynb`: file containing functions to obtain call option prices using Heston model via Fast Fourier Transform.
+- `RetrieveData.ipynb`: notebook where it is possible to see an example of data retrieving using the utils implemented 
 
