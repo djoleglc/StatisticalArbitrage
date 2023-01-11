@@ -268,7 +268,7 @@ def apply_twosigma(
 
 
 def applyStrategyRolling(
-    df_beta, df_price, trading_window, thr_pval=0.10, quantile=2, fee_rate=0.1 / 100
+    df_beta, df_price, trading_window, thr_pval=0.10, quantile=2, fee_rate=0.1 / 100, stop_loss = 0.2
 ):
     """
     function that applies the two sigma strategy
@@ -315,6 +315,7 @@ def applyStrategyRolling(
                 end_date=end_date,
                 fee_rate=fee_rate,
                 quantile=quantile,
+                stop_loss = stop_loss
             )
             stratResult.append(strat)
 
