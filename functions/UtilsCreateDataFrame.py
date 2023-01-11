@@ -80,6 +80,7 @@ def createDataFrame(
     tickers,
     n_job=4,
     to_save=False,
+    parallel = True,
     output_name=None,
     output_folder=None,
 ):
@@ -107,10 +108,37 @@ def createDataFrame(
     """
     paths = [nameFile(ticker, date, input_folder) for ticker in tickers]
     fun = lambda x: modifyDataFrame(x)
-    dfs = Pool(n_job).map(fun, zip(tickers, paths))
+    if parallel:        
+        dfs = Pool(n_job).map(fun, zip(tickers, paths))
+    else:
+        dfs = [fun(x) for x in zip(tickers,paths)]
+        
     df = reduce(
         lambda x, h: pd.merge(x, h, right_index=True, left_index=True, how="outer"), dfs
     )
     if to_save:
         saveDataFrame(tickers, date, df, output_name, output_folder)
     return df
+
+
+def createUniqueDataFrame(
+    list_dates, 
+    input_folder,
+    tickers,
+    n_job=4,
+    to_save=False,
+    output_name=None,
+    output_folder=None):
+
+    fun_ = lambda date: createDataFrame(
+        input_folder=input_folder,
+        date=date,
+        tickers=tickers,
+        n_job=n_job,
+        to_save=False,
+    )
+    unique_df = pd.concat(fun_(date) for date in list_dates)
+    if to_save:
+        first_last_date = list_dates[0] + "_" + list_dates[-1]
+        saveDataFrame(tickers, first_last_date, unique_df, output_name, output_folder)
+    return unique_df
