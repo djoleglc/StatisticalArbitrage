@@ -1,5 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import List
+import datetime
 import pandas
 import numpy
 import pandas as pd
@@ -30,8 +31,8 @@ def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, f
                 y variable
         - asset_name_2 : str
                 x variable
-        - window : int
-                amount of days which determines the calibration window size
+        - calibration_window : dict
+                time dictionary which determines the calibration window size
         - safe_output_csv : bool
                 determines whether the output table should be saved as csv
     Output:
@@ -60,7 +61,7 @@ def getCombRet(coin_df, asset_name_1, asset_name_2, calib_trading_windows, p_val
         - asset_name_2 : str
                 x variable
         - calib_trading_windows : List
-                list containing amount of days which determine the calibration/trading window size
+                list containing time dictionaries which determine the calibration/trading window size
         - p_values : List
                 list containing the relevant p-values as a threshold for trading
         - stop_loss : float in the interval of (0,1)
@@ -74,10 +75,12 @@ def getCombRet(coin_df, asset_name_1, asset_name_2, calib_trading_windows, p_val
     """
     coin_df["Month"] = coin_df.index.to_period('M')
     ret_dict = {}
+    index_windows = [datetime.timedelta(**window) for window in calib_trading_windows]
     for date in coin_df["Month"].unique():
-        ret_dict[str(date)] = pd.DataFrame(columns = p_values, index = calib_trading_windows)
+        ret_dict[str(date)] = pd.DataFrame(columns = p_values, index = index_windows)
     
     for window in calib_trading_windows:
+    idx_window = datetime.timedelta(**window)
         try:
             beta_df = pd.read_csv(f"./data/df_beta_{asset_name_2}_{asset_name_1}.csv.gz") #_{window}_days
             beta_df = beta_df.set_index("time")
@@ -107,7 +110,7 @@ def getCombRet(coin_df, asset_name_1, asset_name_2, calib_trading_windows, p_val
                 p_dict[p_val] = total_ret
                 
             helper_df = ret_dict[str(date)]
-            helper_df.loc[window] = (p_dict)
+            helper_df.loc[idx_window] = (p_dict)
             ret_dict[str(date)] = helper_df
     
     return ret_dict
