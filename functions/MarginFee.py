@@ -49,8 +49,8 @@ def getDictionaryMarginRate(list_names):
     options = Options()
     options.add_argument("--disable-notifications");
     options.add_argument("disable-infobars");
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
+   # options.add_argument('--headless')
+    #options.add_argument('--disable-gpu')
     driver = webdriver.Chrome(options=options)
     url = "https://www.binance.com/en/margin/interest-history"
     driver.get(url)
