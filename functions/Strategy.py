@@ -20,7 +20,7 @@ class ResultStrategy:
     exit_: List
 
         
-def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window_days, safe_output_csv = False):
+def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, frequency = {"minutes" = 1},  safe_output_csv = False):
     """
     Input:
         - coinf_df : pd.DataFrame
@@ -37,7 +37,7 @@ def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window_da
         - df_beta : pd.DataFrame
                dataframe containing beta, intercept, r2, res_std, res_mean, stationarity_pvalue, date_est
     """
-    window = calibration_window_days * 1440 #1440 is amount of seconds per day
+    window = int(fromTimetoPlainIndex(window = calibration_window, frequency = frequency))
     index_input = coin_df.index
     y, x = coin_df[asset_name_1].to_numpy(), coin_df[asset_name_2].to_numpy(), 
     rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=4)
