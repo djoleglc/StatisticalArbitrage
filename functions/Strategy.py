@@ -4,6 +4,7 @@ import pandas
 import numpy
 import pandas as pd
 import datetime
+from functions.Regression import *
 
 
 @dataclass
