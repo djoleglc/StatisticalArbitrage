@@ -42,9 +42,9 @@ def create_beta_table(coin_df, asset_name_1, asset_name_2, calibration_window, f
     index_input = coin_df.index
     y, x = coin_df[asset_name_1].to_numpy(), coin_df[asset_name_2].to_numpy(), 
     rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=n_job)
-    df_beta = ResultDataFrame(rolling, index_input[:last])
+    df_beta = ResultDataFrame(rolling, index_input[:])
     if safe_output_csv:
-        df_beta.to_csv(f"./df_beta_{asset_name_2}_{asset_name_1}_{calibration_window_days}_days.csv.gz")
+        df_beta.to_csv(f"./df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days.csv.gz")
     return df_beta
 
 
