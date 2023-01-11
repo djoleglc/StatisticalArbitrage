@@ -1,5 +1,4 @@
 # StatisticalArbitrage
-This project aims to 
 Datasets are available at: https://drive.google.com/drive/folders/1je9SfdxHSQwvVLxs_09mwMnfUiYprBkc?usp=share_link
 
 ### Team
