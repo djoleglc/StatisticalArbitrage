@@ -1,6 +1,7 @@
 import pandas as pd
 from functions.UtilsCreateDataFrame import *
 import sklearn
+import datetime as dt
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 import numpy as np
@@ -87,3 +88,25 @@ def ResultDataFrame(result, index_input):
     df_result = df_result.set_index(index_input)
     df_result["date_est"] = df_result.index
     return df_result
+
+
+def fromTimetoPlainIndex(window, frequency):
+    """
+    function to get number of observations given a time window and a frequency of the dataframe
+    Inputs:
+        -window: dict
+                datetime arguments dict
+        -frequency: dict
+                datetime arguments dict 
+    Output: 
+        -n_obs: int 
+    
+    """
+    win = dt.timedelta(**window)
+    freq = dt.timedelta(**frequency)
+    n_obs = win/freq
+    return n_obs 
+
+
+
+
