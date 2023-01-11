@@ -142,3 +142,11 @@ def createUniqueDataFrame(
         first_last_date = list_dates[0] + "_" + list_dates[-1]
         saveDataFrame(tickers, first_last_date, unique_df, output_name, output_folder)
     return unique_df
+
+
+def loadCleanDataFrame(path):
+    df_ = pd.read_csv(path)
+    df_ = df_.set_index(pd.to_datetime(df_.time))
+    df_.drop(columns=["time"], inplace=True)
+    return df_
+
