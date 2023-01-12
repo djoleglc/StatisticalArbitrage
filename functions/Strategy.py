@@ -3,10 +3,12 @@ from typing import List
 import datetime
 import pandas
 import numpy
+import os
 import pandas as pd
 import datetime
 from functions.Regression import *
-
+import warnings
+import joblib 
 
 @dataclass
 class ResultStrategy:
@@ -29,7 +31,9 @@ def create_beta_table(
     calibration_window,
     frequency={"minutes": 1},
     safe_output_csv=False,
+    output_folder = "H:",
     n_job=4,
+    stat_test = "adfuller"
 ):
     """
     Input:
@@ -43,21 +47,29 @@ def create_beta_table(
                 time dictionary which determines the calibration window size
         - safe_output_csv : bool
                 determines whether the output table should be saved as csv
+        -stat_test : str
+                string name of the statistical test to use for stationarity 
     Output:
         - df_beta : pd.DataFrame
                dataframe containing beta, intercept, r2, res_std, res_mean, stationarity_pvalue, date_est
     """
     window = int(fromTimetoPlainIndex(window=calibration_window, frequency=frequency))
+    coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     index_input = coin_df.index
     y, x = (
         coin_df[asset_name_1].to_numpy(),
         coin_df[asset_name_2].to_numpy(),
     )
-    rolling = npe.rolling_apply(linearRegression_np, window, x, y, n_jobs=n_job)
+    linReg = lambda x,y: linearRegression_np(x,y,stat_test = stat_test)
+    rolling = npe.rolling_apply(linReg, window, x, y, n_jobs=n_job)
     df_beta = ResultDataFrame(rolling, index_input[:])
     if safe_output_csv:
+        if output_folder == None or output_folder == False:
+            directory = os.getcwd()
+        else:
+            directory = output_folder
         df_beta.to_csv(
-            f"./df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days.csv.gz"
+            f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days_{stat_test}.csv.gz"
         )
     return df_beta
 
@@ -66,12 +78,18 @@ def getCombRet(
     coin_df,
     asset_name_1,
     asset_name_2,
-    calib_trading_windows,
+    trading_windows,
+    calib_window,
     p_values,
     stop_loss=0.2,
+    frequency = {"minutes":1},
     safe_beta_csv=False,
+    output_folder_beta = None,
+    input_folder = None,
+    stat_test = "adfuller"
 ):
     """
+    functions to have the result for different trading windows and threshold for a given df_beta calculated using a      calibration window 
     Input:
         - coinf_df : pd.DataFrame
                 DataFrame with the prices of assets (coins)
@@ -79,8 +97,10 @@ def getCombRet(
                 y variable
         - asset_name_2 : str
                 x variable
-        - calib_trading_windows : List
-                list containing time dictionaries which determine the calibration/trading window size
+        - trading_windows : List
+                list containing time dictionaries which determine the trading window size
+        -calib_window : dict
+                dict containing the calibration window to use 
         - p_values : List
                 list containing the relevant p-values as a threshold for trading
         - stop_loss : float in the interval of (0,1)
@@ -92,67 +112,66 @@ def getCombRet(
                dictionary with keys = date (e.g. "2021-01") and the respective dataframe of all
                combinations of p_values and calib_trading_windows
     """
+    coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     coin_df["Month"] = coin_df.index.to_period("M")
     ret_dict = {}
-    index_windows = [datetime.timedelta(**window) for window in calib_trading_windows]
+    index_windows = [datetime.timedelta(**window) for window in trading_windows]
+    
     for date in coin_df["Month"].unique():
         ret_dict[str(date)] = pd.DataFrame(columns=p_values, index=index_windows)
 
-    for window in calib_trading_windows:
-        idx_window = datetime.timedelta(**window)
-        try:
-            beta_df = pd.read_csv(
-                f"./data/df_beta_{asset_name_2}_{asset_name_1}.csv.gz"
-            )  # _{window}_days
-            beta_df = beta_df.set_index("time")
-            beta_df.index = pd.to_datetime(beta_df.index)
-            beta_df["Month"] = beta_df.index.to_period("M")
-        except:
-            beta_df = create_beta_table(
-                coin_df, asset_name_1, asset_name_2, window, safe_beta_csv
+    window_day = int(fromTimetoPlainIndex(window=calib_window, frequency=frequency))
+    
+    try:
+        if input_folder == None or input_folder == False:
+            directory = os.getcwd()
+        else:
+            directory = input_folder
+        beta_df = pd.read_csv(
+                f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window_day/1440}_days_{stat_test}.csv.gz"
             )
-            beta_df = beta_df.set_index("time")
-            beta_df.index = pd.to_datetime(beta_df.index)
-            beta_df["Month"] = beta_df.index.to_period("M")
-
-        trading_window = {"days": window, "hours": 0, "minutes": 0}
-
+        print("Beta Table Loaded")
+        beta_df = beta_df.set_index("time")
+        beta_df.index = pd.to_datetime(beta_df.index)
+        beta_df["Month"] = beta_df.index.to_period("M")
+    except:
+        print("Calculating Beta Table")
+        beta_df = create_beta_table(
+                coin_df = coin_df, 
+                asset_name_1 = asset_name_1, 
+                asset_name_2 = asset_name_2, 
+                calibration_window = calib_window, 
+                safe_output_csv = safe_beta_csv, 
+                output_folder = output_folder_beta,
+                stat_test = stat_test
+            )
+        beta_df["Month"] = beta_df.index.to_period("M")
+    
+    df_return = pd.DataFrame(index = [datetime.timedelta(**w) for w in trading_windows], columns = p_values)
+    for window in trading_windows:
+        idx_window = datetime.timedelta(**window)
         for date in coin_df["Month"].unique():
             p_dict = {}
             for p_val in p_values:
                 result_strategy = applyStrategyRolling(
                     df_beta=beta_df.loc[beta_df.Month == date],
                     df_price=coin_df.loc[coin_df.Month == date],
-                    trading_window=trading_window,
+                    trading_window=window,
                     thr_pval=p_val,
                     quantile=2,
                     fee_rate=0.1 / 100,
                     stop_loss=stop_loss,
                 )
                 df_trades = strategyDataFrame(result_strategy)
+                ret_dict[f"{window}_{p_val}"] = df_trades
+                if len(df_trades.index) > 0:
+                    total_ret = df_trades["ret_"].prod()
+                else:
+                    total_ret = 1
+                df_return.loc[idx_window,p_val] = total_ret
+                
+    return df_return, ret_dict
 
-                total_ret = df_trades["ret_"].prod()
-                p_dict[p_val] = total_ret
-
-            helper_df = ret_dict[str(date)]
-            helper_df.loc[idx_window] = p_dict
-            ret_dict[str(date)] = helper_df
-
-    return ret_dict
-
-
-borrowCost_dict = {
-    """
-    daily margin borrow interest from Binance
-    """
-    "ADAU": 0.024500 / 100,
-    "BNB": 0.300000 / 100,
-    "BTC": 0.005699 / 100,
-    "DOGE": 0.023200 / 100,
-    "ETH": 0.005699 / 100,
-    "SOL": 0.109589 / 100,
-    "XRP": 0.017000 / 100,
-}
 
 
 def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
@@ -173,6 +192,7 @@ def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
         - feeToPay: float
                 borrowing fee to pay
     """
+    borrowCost_dict = joblib.load("MarginFeeCoins_Dictionary.joblib")
     daily_interest = borrowCost_dict[short_asset_name]
     time_delta = exit_date - enter_date
     hours_borrowed = numpy.ceil(time_delta.total_seconds() / 60 / 60)
@@ -412,8 +432,8 @@ def applyStrategyRolling(
                 list containing information about the day in which a signal is observed and used for trading
 
     """
-    y_name = df_price.columns[1]
-    x_name = df_price.columns[0]
+    y_name = df_price.columns[0]
+    x_name = df_price.columns[1]
     stratResult = []
     decision_trading_day = []
     # used only to initialize the for
