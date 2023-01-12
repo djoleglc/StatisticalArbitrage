@@ -105,12 +105,22 @@ def getCombRet(
                 list containing the relevant p-values as a threshold for trading
         - stop_loss : float in the interval of (0,1)
                 determines the maximum loss we are willing to take before exiting the position
+        - frequency: dict
+                time dictionary with the frequency of the data 
         - safe_output_csv : bool
                 determines whether the output table should be saved as csv
+        - output_folder_beta : str
+                folder where beta table is saved if its creation is necessary 
+        - input_folder: str
+                folder where beta tables are saved
+        -stat_test : str
+                statistical test to use 
     Output:
-        - ret_dict : Dictionary
-               dictionary with keys = date (e.g. "2021-01") and the respective dataframe of all
-               combinations of p_values and calib_trading_windows
+        - df_return : pd.DataFrame
+                dataframe containing the results 
+        - ret_dict : dict
+               dictionary containing trades dataframe for each trading_window and for each p val 
+    
     """
     coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     coin_df["Month"] = coin_df.index.to_period("M")
