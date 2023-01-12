@@ -163,7 +163,7 @@ def createUniqueDataFrame(
         to_save=False,
         type_ = type_
     )
-    unique_df = pd.concat(fun_(date) for date in list_dates)
+    unique_df = pd.concat([fun_(date) for date in list_dates])
     if to_save:
         first_last_date = list_dates[0] + "_" + list_dates[-1]
         saveDataFrame(tickers, first_last_date, unique_df, output_name, output_folder)
