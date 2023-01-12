@@ -40,7 +40,7 @@ def create_listdates(d):
     return dates
 
 
-def downloadFile(name, date):
+def downloadFile(name, date, type_ = "klines"):
     """
     Function to download a list of dates files using Parallelization
     filename is setted for this project
@@ -51,13 +51,18 @@ def downloadFile(name, date):
                 date to download date must have the following syntax: "2021-01"
     """
     directory = os.getcwd()
-    filename = f"{directory}\\{name}-1m-{date}.zip"
-    url = f"https://data.binance.vision/data/spot/monthly/klines/{name}/1m/{name}-1m-{date}.zip"
+    if type_ == "klines":
+        filename = f"{directory}\\{name}-1m-{date}.zip"
+        url = f"https://data.binance.vision/data/spot/monthly/klines/{name}/1m/{name}-1m-{date}.zip"
+    elif type_ == "trades":
+        filename = f"{directory}\\{name}-trades-{date}.zip"
+        url = f"https://data.binance.vision/data/spot/monthly/trades/{name}/{name}-trades-{date}.zip"
+        
     wget.download(url)
     return filename
 
 
-def moveFile(filename, name, date, folder):
+def moveFile(filename, name, date, folder, type_ = "klines"):
     """
     Function to move a file
     Inputs:
@@ -71,10 +76,14 @@ def moveFile(filename, name, date, folder):
                 name of the folder to store the data, e.g. 'H'
 
     """
-    shutil.move(filename, f"{folder}\\{name}-1m-{date}.zip")
+    if type_ == "klines":
+        path_to_save = f"{folder}\\{name}-1m-{date}.zip"
+    if type_ == "trades":
+        path_to_save = f"{folder}\\{name}-trades-{date}.zip"
+    shutil.move(filename, path_to_save)
 
 
-def downloadmoveFile(name, date, folder="H:"):
+def downloadmoveFile(name, date, folder="H:", type_ = "klines"):
     """
     Function to download and move a file
     Inputs:
@@ -85,11 +94,11 @@ def downloadmoveFile(name, date, folder="H:"):
         -folder: str
                 folder to store the file
     """
-    filename = downloadFile(name, date)
-    moveFile(filename, name, date, folder)
+    filename = downloadFile(name, date, type_ = type_)
+    moveFile(filename, name, date, folder, type_ = type_)
 
 
-def downloadList(name, dates, folder="H:", parallel=True, n_job=2):
+def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klines"):
     """
     Function to download a list of dates files using Parallelization
     Inputs:
@@ -104,7 +113,7 @@ def downloadList(name, dates, folder="H:", parallel=True, n_job=2):
         -n_job: int
                 number of cores to use
     """
-    fun_ = lambda date: downloadmoveFile(name, date, folder)
+    fun_ = lambda date: downloadmoveFile(name, date, folder, type_ = type_)
     if parallel:
         Pool(n_job).map(fun_, dates)
         return "Completed"

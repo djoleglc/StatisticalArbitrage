@@ -38,8 +38,6 @@ def modifyDataFrame(x):
     df_ = LoadDataset(path)
     df_[name] = df_.close * 0.5 + df_.open * 0.5
     df = pd.DataFrame(df_[name])
-    # df = df.rename(columns={"price": name})
-    # df = df.resample(frequency).last()
     return df
 
 
@@ -73,6 +71,25 @@ def saveDataFrame(tickers, date, df, output_name=None, output_folder=None):
         name_to_save = f"{folder}/{output_name}_{date}.csv.gz"
         df.to_csv(name_to_save)
 
+        
+def modifyDataFrameHistTrades(x):
+    """
+    function to modify a dataframe and to keep only the price
+    Inputs:
+        -x: list or tuple
+                list or tuple containing the name of the asset to load and its path
+    Output:
+        -df: pd.DataFrame
+                dataframe containing the price of the given asset
+    """
+    name, path = x[0], x[1]
+    df = LoadDatasetHistTrades(path)
+    df_to_keep = df.loc[df.isBestMatch == True]
+    sell = df_to_keep.loc[df.isBuyerMaker == True].price.rename("sell").resample("1min").last()
+    buy = df_to_keep.loc[df.isBuyerMaker == False].price.rename("buy").resample("1min").last()
+    merged = pd.merge(buy, sell, left_index = True, right_index = True, how = "inner")
+    df_mid = merged.mean(axis = 1).rename(name)
+    return df_mid
 
 def createDataFrame(
     input_folder,
@@ -83,6 +100,7 @@ def createDataFrame(
     parallel=True,
     output_name=None,
     output_folder=None,
+    type_ = "klines"
 ):
     """
     function to create and save the dataframe
@@ -106,8 +124,13 @@ def createDataFrame(
                 pandas dataframe having the time as index and as many columns and the number of tickers specified in input
 
     """
-    paths = [nameFile(ticker, date, input_folder) for ticker in tickers]
-    fun = lambda x: modifyDataFrame(x)
+    if type_ == "klines":
+        paths = [nameFile(ticker, date, input_folder) for ticker in tickers]
+        fun = lambda x: modifyDataFrame(x)
+    elif type_ == "trades":
+        paths = [nameFileHistTrades(ticker, date, input_folder) for ticker in tickers]
+        fun = lambda x: modifyDataFrameHistTrades(x)
+        
     if parallel:
         dfs = Pool(n_job).map(fun, zip(tickers, paths))
     else:
@@ -129,6 +152,7 @@ def createUniqueDataFrame(
     to_save=False,
     output_name=None,
     output_folder=None,
+    type_ = "klines"
 ):
 
     fun_ = lambda date: createDataFrame(
@@ -137,12 +161,54 @@ def createUniqueDataFrame(
         tickers=tickers,
         n_job=n_job,
         to_save=False,
+        type_ = type_
     )
     unique_df = pd.concat(fun_(date) for date in list_dates)
     if to_save:
         first_last_date = list_dates[0] + "_" + list_dates[-1]
         saveDataFrame(tickers, first_last_date, unique_df, output_name, output_folder)
     return unique_df
+
+
+def LoadDatasetHistTrades(path):
+    """
+    Function to load a dataset and to set the time as index
+    names of the columns are taken from: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#old-trade-lookup-market_data
+    Input:
+      -path: str
+            path of the zipped dataset to open
+    Output: 
+      -df : pd.DataFrame
+    
+    """
+    df = pd.read_csv(path, header = None)
+    df.columns = [ "Id"	,"price",	"qty",	"quoteQty",	"time"	,"isBuyerMaker",	"isBestMatch"]
+    df["time"] = pd.to_datetime(df["time"].to_numpy(), utc = True, unit = "ms")
+    df.index = df["time"]
+    df.drop(columns = ["time"], inplace = True)
+    return df 
+
+
+
+def nameFileHistTrades(ticker, date, folder):
+    """
+    function to get the path of the file
+    Inputs:
+        -ticker: str
+                ticker of the dataset without USDT, e.g. "ETH"
+        -date: str
+                monthly date of the dataset to load, e.g. "2021-01"
+        -folder: str
+                path of the input folder
+    Output:
+        -path: str
+                path of the file to load
+    """
+    path = f"{folder}/{ticker}USDT-trades-{date}.zip"
+    return path
+
+
+
 
 
 def loadCleanDataFrame(path):
