@@ -124,12 +124,7 @@ def getCombRet(
     """
     coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     coin_df["Month"] = coin_df.index.to_period("M")
-    ret_dict = {}
     index_windows = [datetime.timedelta(**window) for window in trading_windows]
-    
-    for date in coin_df["Month"].unique():
-        ret_dict[str(date)] = pd.DataFrame(columns=p_values, index=index_windows)
-
     window_day = int(fromTimetoPlainIndex(window=calib_window, frequency=frequency))
     
     try:
@@ -158,10 +153,12 @@ def getCombRet(
         beta_df["Month"] = beta_df.index.to_period("M")
     
     df_return = pd.DataFrame(index = [datetime.timedelta(**w) for w in trading_windows], columns = p_values)
-    for window in trading_windows:
-        idx_window = datetime.timedelta(**window)
-        for date in coin_df["Month"].unique():
-            p_dict = {}
+    month_dict = dict()
+    for date in coin_df["Month"].unique():    
+        ret_dict = dict()
+        df_return = pd.DataFrame(index = [datetime.timedelta(**w) for w in trading_windows], columns = p_values)
+        for window in trading_windows:
+            idx_window = datetime.timedelta(**window)
             for p_val in p_values:
                 result_strategy = applyStrategyRolling(
                     df_beta=beta_df.loc[beta_df.Month == date],
@@ -179,8 +176,9 @@ def getCombRet(
                 else:
                     total_ret = 1
                 df_return.loc[idx_window,p_val] = total_ret
+        month_dict[str(date)] = (df_return, ret_dict)
                 
-    return df_return, ret_dict
+    return month_dict
 
 
 
