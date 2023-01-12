@@ -116,10 +116,8 @@ def getCombRet(
         -stat_test : str
                 statistical test to use 
     Output:
-        - df_return : pd.DataFrame
-                dataframe containing the results 
-        - ret_dict : dict
-               dictionary containing trades dataframe for each trading_window and for each p val 
+        - month_dict : dict
+                dictionary containing for each month the dataset of all the results and also a dictionary containing the book trades 
     
     """
     coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
