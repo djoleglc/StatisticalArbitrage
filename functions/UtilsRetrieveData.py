@@ -81,6 +81,7 @@ def moveFile(filename, name, date, folder, type_ = "klines"):
     if type_ == "trades":
         path_to_save = f"{folder}\\{name}-trades-{date}.zip"
     shutil.move(filename, path_to_save)
+    return path_to_save
 
 
 def downloadmoveFile(name, date, folder="H:", type_ = "klines"):
@@ -95,10 +96,10 @@ def downloadmoveFile(name, date, folder="H:", type_ = "klines"):
                 folder to store the file
     """
     filename = downloadFile(name, date, type_ = type_)
-    moveFile(filename, name, date, folder, type_ = type_)
+    path = moveFile(filename, name, date, folder, type_ = type_)
+    return path 
 
-
-def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klines"):
+def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klines", return_path = False):
     """
     Function to download a list of dates files using Parallelization
     Inputs:
@@ -115,9 +116,11 @@ def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klin
     """
     fun_ = lambda date: downloadmoveFile(name, date, folder, type_ = type_)
     if parallel:
-        Pool(n_job).map(fun_, dates)
-        return "Completed"
+        paths = Pool(n_job).map(fun_, dates)
     else:
+        paths = []
         for date in dates:
-            fun_(date)
-        return "Completed"
+            paths.append(fun_(date))
+    if return_path:
+        return paths
+        

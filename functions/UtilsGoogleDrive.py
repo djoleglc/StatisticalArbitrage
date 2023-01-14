@@ -6,19 +6,33 @@ def UploadFile(file, folder_id):
     gauth = GoogleAuth()          
     drive = GoogleDrive(gauth)
     name_file = file.split("/")[-1].split(".csv")[0]
-
     gfile = drive.CreateFile({'parents': [{'id': folder_id}]})
     # Read file and set it as the content of this instance.
     gfile["title"] = name_file
     gfile.SetContentFile(file)
     gfile.Upload() # Upload the file
         
+
+def UploadFileListData(files, folder_id):
+    gauth = GoogleAuth()          
+    drive = GoogleDrive(gauth)
+    for file in files:
+        name_file = file.split("\\")[-1]
+        gfile = drive.CreateFile({'parents': [{'id': folder_id}]})
+        # Read file and set it as the content of this instance.
+        gfile["title"] = name_file
+        gfile.SetContentFile(file)
+        gfile.Upload() # Upload the file
         
         
-def CreateFolder(folder_id, folderName):
+def CreateFolder(folder_id, folderName, return_id = False):
             
         gauth = GoogleAuth()          
         drive = GoogleDrive(gauth)
+        file_list = FilesAvailableDrive(folder_id)
+        id_ = [ j["id"] for j in file_list if j["title"] == folderName]
+        if len(id_)>0:
+            return id_[0]
         file_metadata = {
             'title': folderName,
             'parents': [{'id': folder_id}], #parent folder
@@ -27,6 +41,12 @@ def CreateFolder(folder_id, folderName):
 
         folder = drive.CreateFile(file_metadata)
         folder.Upload()
+        if return_id:
+            file_list = FilesAvailableDrive(folder_id)
+            id_ = [ j["id"] for j in file_list if j["title"] == folderName]
+            if len(id_)>0:
+                return id_[0]
+            
         
         
 def FilesAvailableDrive(folder_id):
