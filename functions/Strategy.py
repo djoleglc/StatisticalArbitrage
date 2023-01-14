@@ -60,6 +60,7 @@ def create_beta_table(
         coin_df[asset_name_1].to_numpy(),
         coin_df[asset_name_2].to_numpy(),
     )
+    
     linReg = lambda x,y: linearRegression_np(x,y,stat_test = stat_test)
     rolling = npe.rolling_apply(linReg, window, x, y, n_jobs=n_job)
     df_beta = ResultDataFrame(rolling, index_input[:])
@@ -68,10 +69,13 @@ def create_beta_table(
             directory = os.getcwd()
         else:
             directory = output_folder
+        path = f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days_{stat_test}.csv.gz"
         df_beta.to_csv(
-            f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days_{stat_test}.csv.gz"
+            path
         )
-    return df_beta
+        return df_beta, path
+    else:
+        return df_beta
 
 
 def getCombRet(
@@ -449,7 +453,7 @@ def applyStrategyRolling(
 
     for j, t in enumerate(df_beta.index):
         row = df_beta.loc[t, :]
-        if row.stationarity_pvalue <= thr_pval and t > end_date:
+        if row.stationarity_pvalue <= thr_pval and t > end_date and j != len(df_beta.index) - 1:
             decision_trading_day.append(row)
             init_date = df_beta.index[j + 1]
             end_date = init_date + delta_time
