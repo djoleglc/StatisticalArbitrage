@@ -3,12 +3,14 @@ from typing import List
 import datetime
 import pandas
 import numpy
+from functions.UtilsGoogleDrive import *
 import os
 import pandas as pd
 import datetime
 from functions.Regression import *
 import warnings
-import joblib 
+import joblib
+
 
 @dataclass
 class ResultStrategy:
@@ -31,9 +33,9 @@ def create_beta_table(
     calibration_window,
     frequency={"minutes": 1},
     safe_output_csv=False,
-    output_folder = "H:",
+    output_folder="H:",
     n_job=4,
-    stat_test = "adfuller"
+    stat_test="adfuller",
 ):
     """
     Input:
@@ -48,7 +50,7 @@ def create_beta_table(
         - safe_output_csv : bool
                 determines whether the output table should be saved as csv
         -stat_test : str
-                string name of the statistical test to use for stationarity 
+                string name of the statistical test to use for stationarity
     Output:
         - df_beta : pd.DataFrame
                dataframe containing beta, intercept, r2, res_std, res_mean, stationarity_pvalue, date_est
@@ -60,19 +62,17 @@ def create_beta_table(
         coin_df[asset_name_1].to_numpy(),
         coin_df[asset_name_2].to_numpy(),
     )
-    
-    linReg = lambda x,y: linearRegression_np(x,y,stat_test = stat_test)
+
+    linReg = lambda x, y: linearRegression_np(x, y, stat_test=stat_test)
     rolling = npe.rolling_apply(linReg, window, x, y, n_jobs=n_job)
     df_beta = ResultDataFrame(rolling, index_input[:])
     if safe_output_csv:
-        if output_folder == None or output_folder == False:
+        if output_folder is None or output_folder == False:
             directory = os.getcwd()
         else:
             directory = output_folder
         path = f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days_{stat_test}.csv.gz"
-        df_beta.to_csv(
-            path
-        )
+        df_beta.to_csv(path)
         return df_beta, path
     else:
         return df_beta
@@ -86,14 +86,15 @@ def getCombRet(
     calib_window,
     p_values,
     stop_loss=0.2,
-    frequency = {"minutes":1},
+    frequency={"minutes": 1},
     safe_beta_csv=False,
-    output_folder_beta = None,
-    input_folder = None,
-    stat_test = "adfuller"
+    output_folder_beta=None,
+    input_folder=None,
+    stat_test="adfuller",
+    drive=True,
 ):
     """
-    functions to have the result for different trading windows and threshold for a given df_beta calculated using a      calibration window 
+    functions to have the result for different trading windows and threshold for a given df_beta calculated using a      calibration window
     Input:
         - coinf_df : pd.DataFrame
                 DataFrame with the prices of assets (coins)
@@ -104,62 +105,73 @@ def getCombRet(
         - trading_windows : List
                 list containing time dictionaries which determine the trading window size
         -calib_window : dict
-                dict containing the calibration window to use 
+                dict containing the calibration window to use
         - p_values : List
                 list containing the relevant p-values as a threshold for trading
         - stop_loss : float in the interval of (0,1)
                 determines the maximum loss we are willing to take before exiting the position
         - frequency: dict
-                time dictionary with the frequency of the data 
+                time dictionary with the frequency of the data
         - safe_output_csv : bool
                 determines whether the output table should be saved as csv
         - output_folder_beta : str
-                folder where beta table is saved if its creation is necessary 
+                folder where beta table is saved if its creation is necessary
         - input_folder: str
                 folder where beta tables are saved
         -stat_test : str
-                statistical test to use 
+                statistical test to use
     Output:
         - month_dict : dict
-                dictionary containing for each month the dataset of all the results and also a dictionary containing the book trades 
-    
+                dictionary containing for each month the dataset of all the results and also a dictionary containing the book trades
+
     """
     coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     coin_df["Month"] = coin_df.index.to_period("M")
     index_windows = [datetime.timedelta(**window) for window in trading_windows]
     window_day = int(fromTimetoPlainIndex(window=calib_window, frequency=frequency))
-    
+
     try:
         if input_folder == None or input_folder == False:
             directory = os.getcwd()
         else:
             directory = input_folder
         beta_df = pd.read_csv(
-                f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window_day/1440}_days_{stat_test}.csv.gz"
-            )
+            f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window_day/1440}_days_{stat_test}.csv.gz"
+        )
         print("Beta Table Loaded")
         beta_df = beta_df.set_index("time")
         beta_df.index = pd.to_datetime(beta_df.index)
         beta_df["Month"] = beta_df.index.to_period("M")
     except:
+
         print("Calculating Beta Table")
-        beta_df,_ = create_beta_table(
-                coin_df = coin_df, 
-                asset_name_1 = asset_name_1, 
-                asset_name_2 = asset_name_2, 
-                calibration_window = calib_window, 
-                safe_output_csv = safe_beta_csv, 
-                output_folder = output_folder_beta,
-                stat_test = stat_test
-            )
-        
+        if drive:
+            id_ = "1Vg9w6RpPjukasvRqxM4cqPxabDi9MeyS"
+            folder_name, id_pair = CreatePairFolder(id_, (asset_name_1, asset_name_2))
+
+        beta_df, path_beta = create_beta_table(
+            coin_df=coin_df,
+            asset_name_1=asset_name_1,
+            asset_name_2=asset_name_2,
+            calibration_window=calib_window,
+            safe_output_csv=safe_beta_csv,
+            output_folder=output_folder_beta,
+            stat_test=stat_test,
+        )
+        if drive:
+            UploadFile(file=path_beta, folder_id=id_pair)
+
         beta_df["Month"] = beta_df.index.to_period("M")
-    
-    df_return = pd.DataFrame(index = [datetime.timedelta(**w) for w in trading_windows], columns = p_values)
+
+    df_return = pd.DataFrame(
+        index=[datetime.timedelta(**w) for w in trading_windows], columns=p_values
+    )
     month_dict = dict()
-    for date in coin_df["Month"].unique():    
+    for date in coin_df["Month"].unique():
         ret_dict = dict()
-        df_return = pd.DataFrame(index = [datetime.timedelta(**w) for w in trading_windows], columns = p_values)
+        df_return = pd.DataFrame(
+            index=[datetime.timedelta(**w) for w in trading_windows], columns=p_values
+        )
         for window in trading_windows:
             idx_window = datetime.timedelta(**window)
             for p_val in p_values:
@@ -178,11 +190,10 @@ def getCombRet(
                     total_ret = df_trades["ret_"].prod()
                 else:
                     total_ret = 1
-                df_return.loc[idx_window,p_val] = total_ret
+                df_return.loc[idx_window, p_val] = total_ret
         month_dict[str(date)] = (df_return, ret_dict)
-                
-    return month_dict
 
+    return month_dict
 
 
 def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
@@ -341,11 +352,10 @@ def apply_twosigma(
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
-            
+
             enter_denom = np.absolute(df.loc[enter_pos_date, "spread"])
             return_no_fee = (
-                -(df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"])
-                / enter_denom
+                -(df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"]) / enter_denom
                 + 1
             )
 
@@ -383,7 +393,7 @@ def apply_twosigma(
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
-            
+
             enter_denom = np.absolute(df.loc[enter_pos_date, "spread"])
             return_no_fee = (
                 df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"]
@@ -456,7 +466,11 @@ def applyStrategyRolling(
 
     for j, t in enumerate(df_beta.index):
         row = df_beta.loc[t, :]
-        if row.stationarity_pvalue <= thr_pval and t > end_date and j != len(df_beta.index) - 1:
+        if (
+            row.stationarity_pvalue <= thr_pval
+            and t > end_date
+            and j != len(df_beta.index) - 1
+        ):
             decision_trading_day.append(row)
             init_date = df_beta.index[j + 1]
             end_date = init_date + delta_time
