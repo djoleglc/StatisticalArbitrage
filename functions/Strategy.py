@@ -143,7 +143,7 @@ def getCombRet(
         beta_df["Month"] = beta_df.index.to_period("M")
     except:
         print("Calculating Beta Table")
-        beta_df = create_beta_table(
+        beta_df,_ = create_beta_table(
                 coin_df = coin_df, 
                 asset_name_1 = asset_name_1, 
                 asset_name_2 = asset_name_2, 
@@ -152,6 +152,7 @@ def getCombRet(
                 output_folder = output_folder_beta,
                 stat_test = stat_test
             )
+        
         beta_df["Month"] = beta_df.index.to_period("M")
     
     df_return = pd.DataFrame(index = [datetime.timedelta(**w) for w in trading_windows], columns = p_values)
@@ -340,17 +341,18 @@ def apply_twosigma(
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
-
+            
+            enter_denom = np.absolute(df.loc[enter_pos_date, "spread"])
             return_no_fee = (
                 -(df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"])
-                / df.loc[enter_pos_date, "spread"]
+                / enter_denom
                 + 1
             )
 
             return_ = (
-                (-borrow_fee / df.loc[enter_pos_date, "spread"])
-                + (-fee_enter / df.loc[enter_pos_date, "spread"])
-                + (-fee_exit / df.loc[enter_pos_date, "spread"])
+                (-borrow_fee / enter_denom)
+                + (-fee_enter / enter_denom)
+                + (-fee_exit / enter_denom)
                 + return_no_fee
             )
 
@@ -381,15 +383,16 @@ def apply_twosigma(
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
             )
-
+            
+            enter_denom = np.absolute(df.loc[enter_pos_date, "spread"])
             return_no_fee = (
                 df.loc[t_, "spread"] - df.loc[enter_pos_date, "spread"]
-            ) / df.loc[enter_pos_date, "spread"] + 1
+            ) / enter_denom + 1
 
             return_ = (
-                (-borrow_fee / df.loc[enter_pos_date, "spread"])
-                + (-fee_enter / df.loc[enter_pos_date, "spread"])
-                + (-fee_exit / df.loc[enter_pos_date, "spread"])
+                (-borrow_fee / enter_denom)
+                + (-fee_enter / enter_denom)
+                + (-fee_exit / enter_denom)
                 + return_no_fee
             )
 
