@@ -223,7 +223,7 @@ def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
         - feeToPay: float
                 borrowing fee to pay
     """
-    borrowCost_dict = joblib.load("MarginFeeCoins_Dictionary.joblib")
+    borrowCost_dict = joblib.load("config/MarginFeeCoins_Dictionary.joblib")
     daily_interest = borrowCost_dict[short_asset_name]
     time_delta = exit_date - enter_date
     hours_borrowed = numpy.ceil(time_delta.total_seconds() / 60 / 60)
