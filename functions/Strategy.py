@@ -10,6 +10,12 @@ import datetime
 from functions.Regression import *
 import warnings
 import joblib
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.cm as cm
+from functions.UtilsRetrieveData import *
+from functions.UtilsGoogleDrive import *
 
 
 @dataclass
@@ -71,7 +77,10 @@ def create_beta_table(
             directory = os.getcwd()
         else:
             directory = output_folder
-        path = f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days_{stat_test}.csv.gz"
+
+        path_folder = os.path.join(directory, f"{asset_name_1}_{asset_name_2}")
+        os.makedirs(path_folder, exist_ok=True)
+        path = f"{path_folder}/df_beta_{asset_name_2}_{asset_name_1}_{window/1440}_days_{stat_test}.csv.gz"
         df_beta.to_csv(path)
         return df_beta, path
     else:
@@ -136,7 +145,7 @@ def getCombRet(
         else:
             directory = input_folder
         beta_df = pd.read_csv(
-            f"{directory}/df_beta_{asset_name_2}_{asset_name_1}_{window_day/1440}_days_{stat_test}.csv.gz"
+            f"{directory}/{asset_name_1}_{asset_name_2}/df_beta_{asset_name_2}_{asset_name_1}_{window_day/1440}_days_{stat_test}.csv.gz"
         )
         print("Beta Table Loaded")
         beta_df = beta_df.set_index("time")
@@ -517,3 +526,67 @@ def strategyDataFrame(result_strategy):
 
     df_trades = pd.DataFrame(to_dataframe)
     return df_trades
+
+
+def CreatePlot(
+    result,
+    asset_name_1,
+    asset_name_2,
+    idx,
+    to_save=True,
+    visualize=True,
+    output_folder="H:",
+    drive=True,
+    size=(10, 8),
+    dpi=600,
+):
+    sns.set(style="whitegrid")
+    plt.rcParams["figure.figsize"] = size
+    plt.rcParams["figure.dpi"] = dpi
+
+    if drive:
+        try:
+            files = FilesAvailableDrive(idx)
+            id_ = [
+                j["id"] for j in files if j["title"] == f"{asset_name_1}_{asset_name_2}"
+            ][0]
+            boolean_drive = True
+
+        except:
+            boolean_drive = False
+
+    path_ = []
+    cmap_reversed = cm.get_cmap("RdYlGn")
+
+    dates = list(result.keys())
+    for date in dates:
+        df = result[date][0].astype("float")
+
+        sns.heatmap(
+            df,
+            cmap=cmap_reversed,
+            linewidths=0.5,
+            annot=True,
+            yticklabels=df.index,
+            center=1,
+            fmt=".3g",
+        )
+        title = f"{asset_name_1} - {asset_name_2}\n{date}"
+        plt.title(title)
+        plt.xlabel("P-value")
+        plt.ylabel("Trading Window")
+
+        if to_save:
+            name_file = f"{asset_name_1}_{asset_name_2}_{date}.png"
+            path_figure = f"{output_folder}/{asset_name_1}_{asset_name_2}/{name_file}"
+            plt.savefig(path_figure)
+            path_.append(path_figure)
+
+        if visualize:
+            plt.show()
+        else: 
+            plt.close()
+
+
+    if drive and boolean_drive and to_save:
+        UploadFileListData(path_, id_)
