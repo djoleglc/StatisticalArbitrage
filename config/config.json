@@ -1,0 +1,38 @@
+{
+    "idx": "1Vg9w6RpPjukasvRqxM4cqPxabDi9MeyS",
+    "drive": true,
+    "tresh": [
+        {
+            "minutes": 30
+        },
+        {
+            "hours": 1
+        },
+        {
+            "hours": 2
+        },
+        {
+            "hours": 4
+        },
+        {
+            "hours": 6
+        },
+        {
+            "hours": 12
+        }
+    ],
+    "calibration_window": {
+        "hours": 12
+    },
+    "stat_test": "adfuller",
+    "frequency": {
+        "minutes": 1
+    },
+    "p_values": [
+        0.1,
+        0.05,
+        0.01,
+        0.005
+    ],
+    "stop_loss": 0.2
+}

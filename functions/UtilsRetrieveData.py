@@ -18,6 +18,9 @@ def create_listdates(d):
         -dates: list
                 list containing all the dates to retrieve
     """
+    if d[1] == d[0]:
+        return [d[0]]
+    
     first_split = d[0].split("-")
     last_split = d[1].split("-")
     fy, fm = int(first_split[0]), int(first_split[1])
@@ -40,7 +43,7 @@ def create_listdates(d):
     return dates
 
 
-def downloadFile(name, date, type_ = "klines"):
+def downloadFile(name, date, type_ = "klines", frequency = "1m"):
     """
     Function to download a list of dates files using Parallelization
     filename is setted for this project
@@ -52,8 +55,8 @@ def downloadFile(name, date, type_ = "klines"):
     """
     directory = os.getcwd()
     if type_ == "klines":
-        filename = f"{directory}\\{name}-1m-{date}.zip"
-        url = f"https://data.binance.vision/data/spot/monthly/klines/{name}/1m/{name}-1m-{date}.zip"
+        filename = f"{directory}\\{name}-{frequency}-{date}.zip"
+        url = f"https://data.binance.vision/data/spot/monthly/klines/{name}/{frequency}/{name}-{frequency}-{date}.zip"
     elif type_ == "trades":
         filename = f"{directory}\\{name}-trades-{date}.zip"
         url = f"https://data.binance.vision/data/spot/monthly/trades/{name}/{name}-trades-{date}.zip"
@@ -62,7 +65,7 @@ def downloadFile(name, date, type_ = "klines"):
     return filename
 
 
-def moveFile(filename, name, date, folder, type_ = "klines"):
+def moveFile(filename, name, date, folder, type_ = "klines", frequency = "1m"):
     """
     Function to move a file
     Inputs:
@@ -77,14 +80,14 @@ def moveFile(filename, name, date, folder, type_ = "klines"):
 
     """
     if type_ == "klines":
-        path_to_save = f"{folder}\\{name}-1m-{date}.zip"
+        path_to_save = f"{folder}\\{name}-{frequency}-{date}.zip"
     if type_ == "trades":
         path_to_save = f"{folder}\\{name}-trades-{date}.zip"
     shutil.move(filename, path_to_save)
     return path_to_save
 
 
-def downloadmoveFile(name, date, folder="H:", type_ = "klines"):
+def downloadmoveFile(name, date, folder="H:", type_ = "klines", frequency = "1m"):
     """
     Function to download and move a file
     Inputs:
@@ -95,11 +98,11 @@ def downloadmoveFile(name, date, folder="H:", type_ = "klines"):
         -folder: str
                 folder to store the file
     """
-    filename = downloadFile(name, date, type_ = type_)
-    path = moveFile(filename, name, date, folder, type_ = type_)
+    filename = downloadFile(name, date, type_ = type_, frequency = frequency)
+    path = moveFile(filename, name, date, folder, type_ = type_, frequency = frequency)
     return path 
 
-def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klines", return_path = False):
+def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klines", return_path = False, frequency = "1m"):
     """
     Function to download a list of dates files using Parallelization
     Inputs:
@@ -114,7 +117,7 @@ def downloadList(name, dates, folder="H:", parallel=True, n_job=2, type_ = "klin
         -n_job: int
                 number of cores to use
     """
-    fun_ = lambda date: downloadmoveFile(name, date, folder, type_ = type_)
+    fun_ = lambda date: downloadmoveFile(name, date, folder, type_ = type_, frequency = frequency)
     if parallel:
         paths = Pool(n_job).map(fun_, dates)
     else:

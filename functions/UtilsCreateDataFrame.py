@@ -6,7 +6,7 @@ from multiprocessing.dummy import Pool
 import os
 
 
-def nameFile(ticker, date, folder):
+def nameFile(ticker, date, folder, frequency = "1m"):
     """
     function to get the path of the file
     Inputs:
@@ -20,7 +20,7 @@ def nameFile(ticker, date, folder):
         -path: str
                 path of the file to load
     """
-    path = f"{folder}/{ticker}USDT-1m-{date}.zip"
+    path = f"{folder}/{ticker}USDT-{frequency}-{date}.zip"
     return path
 
 
@@ -72,7 +72,7 @@ def saveDataFrame(tickers, date, df, output_name=None, output_folder=None):
         df.to_csv(name_to_save)
 
         
-def modifyDataFrameHistTrades(x):
+def modifyDataFrameHistTrades(x, frequency):
     """
     function to modify a dataframe and to keep only the price
     Inputs:
@@ -82,11 +82,14 @@ def modifyDataFrameHistTrades(x):
         -df: pd.DataFrame
                 dataframe containing the price of the given asset
     """
+    if len(frequency) == 2 and frequency[-1] == "m":
+        freq = f"{frequency[0]}min"
+        
     name, path = x[0], x[1]
     df = LoadDatasetHistTrades(path)
     df_to_keep = df.loc[df.isBestMatch == True]
-    sell = df_to_keep.loc[df.isBuyerMaker == True].price.rename("sell").resample("1min").last()
-    buy = df_to_keep.loc[df.isBuyerMaker == False].price.rename("buy").resample("1min").last()
+    sell = df_to_keep.loc[df.isBuyerMaker == True].price.rename("sell").resample(freq).last()
+    buy = df_to_keep.loc[df.isBuyerMaker == False].price.rename("buy").resample(freq).last()
     merged = pd.merge(buy, sell, left_index = True, right_index = True, how = "inner")
     df_mid = merged.mean(axis = 1).rename(name)
     return df_mid
@@ -100,7 +103,8 @@ def createDataFrame(
     parallel=True,
     output_name=None,
     output_folder=None,
-    type_ = "klines"
+    type_ = "klines", 
+    frequency = "1m"
 ):
     """
     function to create and save the dataframe
@@ -125,11 +129,11 @@ def createDataFrame(
 
     """
     if type_ == "klines":
-        paths = [nameFile(ticker, date, input_folder) for ticker in tickers]
+        paths = [nameFile(ticker, date, input_folder, frequency = frequency) for ticker in tickers]
         fun = lambda x: modifyDataFrame(x)
     elif type_ == "trades":
         paths = [nameFileHistTrades(ticker, date, input_folder) for ticker in tickers]
-        fun = lambda x: modifyDataFrameHistTrades(x)
+        fun = lambda x: modifyDataFrameHistTrades(x, frequency = frequency)
         
     if parallel:
         dfs = Pool(n_job).map(fun, zip(tickers, paths))
@@ -152,7 +156,8 @@ def createUniqueDataFrame(
     to_save=False,
     output_name=None,
     output_folder=None,
-    type_ = "klines"
+    type_ = "klines", 
+    frequency = "1m"
 ):
 
     fun_ = lambda date: createDataFrame(
@@ -161,7 +166,8 @@ def createUniqueDataFrame(
         tickers=tickers,
         n_job=n_job,
         to_save=False,
-        type_ = type_
+        type_ = type_, 
+        frequency = frequency
     )
     unique_df = pd.concat([fun_(date) for date in list_dates])
     if to_save:

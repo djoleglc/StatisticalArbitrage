@@ -61,6 +61,8 @@ def create_beta_table(
         - df_beta : pd.DataFrame
                dataframe containing beta, intercept, r2, res_std, res_mean, stationarity_pvalue, date_est
     """
+    warnings.simplefilter(action="ignore", category=FutureWarning)
+    warnings.simplefilter(action="ignore", category=UserWarning)
     window = int(fromTimetoPlainIndex(window=calibration_window, frequency=frequency))
     coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     index_input = coin_df.index
@@ -71,7 +73,7 @@ def create_beta_table(
 
     linReg = lambda x, y: linearRegression_np(x, y, stat_test=stat_test)
     rolling = npe.rolling_apply(linReg, window, x, y, n_jobs=n_job)
-    df_beta = ResultDataFrame(rolling, index_input[:])
+    df_beta = ResultDataFrame(rolling, index_input)
     if safe_output_csv:
         if output_folder is None or output_folder == False:
             directory = os.getcwd()
@@ -134,6 +136,8 @@ def getCombRet(
                 dictionary containing for each month the dataset of all the results and also a dictionary containing the book trades
 
     """
+    warnings.simplefilter(action="ignore", category=FutureWarning)
+    warnings.simplefilter(action="ignore", category=UserWarning)
     coin_df = coin_df.loc[:, [asset_name_1, asset_name_2]].dropna()
     coin_df["Month"] = coin_df.index.to_period("M")
     index_windows = [datetime.timedelta(**window) for window in trading_windows]
