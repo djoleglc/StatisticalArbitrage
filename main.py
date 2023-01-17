@@ -96,7 +96,7 @@ def apply_strategy(coin_df, pair, Mconfig, config, path_result):
         safe_beta_csv=True,
         input_folder=path_result,
         output_folder_beta=path_result,
-        verbose=False,
+        verbose=True,
         drive=False,
     )
 
@@ -129,6 +129,24 @@ def apply_strategy_pair(pair, coin_df, Mconfig, config, path_result):
         idx=None,
         dpi=80,
     )
+    
+def beta_table(pair, coin_df, Mconfig, config, path_result):
+        
+        beta_table, path_beta = create_beta_table(
+        coin_df=coin_df,
+        asset_name_1=pair[0],
+        asset_name_2=pair[1],
+        calibration_window=config["calibration_window"],
+        frequency=config["frequency"],
+        safe_output_csv=True,
+        n_job=Mconfig["n_job"],
+        output_folder=path_result,
+        stat_test=config["stat_test"],
+        )
+
+        if Mconfig["drive"]:
+            UploadFile(file=path_beta, folder_id=id_pair)
+    
 
 
 def main():
@@ -157,7 +175,13 @@ def main():
     function = lambda pair: apply_strategy_pair(
         pair, coin_df, Mconfig, config, path_result
     )
+    
+    #calculate the beta for each pair
+    for pair in pairs:
+        print("\nCalculating Beta table for: ", pair)
+        beta_table(pair, coin_df, Mconfig, config, path_result)
 
+    #applying the strategy in parallel
     print("Applying the Strategy")
     Pool(Mconfig["n_job"]).map(function, pairs)
 
