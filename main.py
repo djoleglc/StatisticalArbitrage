@@ -186,5 +186,5 @@ def main():
     print("Applying the Strategy")
     Pool(Mconfig["n_job"]).map(function, pairs)
 
-
-main()
+if __name__ == "__main__":
+        main()
