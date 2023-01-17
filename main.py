@@ -9,7 +9,7 @@ from functions.UtilsRetrieveData import downloadList, create_listdates
 from functions.UtilsGoogleDrive import *
 from functions.UtilsCreateDataFrame import createUniqueDataFrame
 from functions.Strategy import *
-
+import matplotlib
 
 def open_config(path):
     with open(path) as json_file:
@@ -150,6 +150,7 @@ def beta_table(pair, coin_df, Mconfig, config, path_result):
 
 
 def main():
+    matplotlib.use('agg')
     # load configuration run main
     Mconfig = open_config(path="config/Mconfig.json")
     config = open_config(path="config/config.json")
