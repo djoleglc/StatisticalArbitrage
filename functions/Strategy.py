@@ -41,7 +41,7 @@ def create_beta_table(
     safe_output_csv=False,
     output_folder="H:",
     n_job=4,
-    stat_test="adfuller",
+    stat_test="adfuller"
 ):
     """
     Input:
@@ -103,6 +103,7 @@ def getCombRet(
     input_folder=None,
     stat_test="adfuller",
     drive=True,
+    verbose = True
 ):
     """
     functions to have the result for different trading windows and threshold for a given df_beta calculated using a      calibration window
@@ -151,13 +152,14 @@ def getCombRet(
         beta_df = pd.read_csv(
             f"{directory}/{asset_name_1}_{asset_name_2}/df_beta_{asset_name_2}_{asset_name_1}_{window_day/1440}_days_{stat_test}.csv.gz"
         )
-        print("Beta Table Loaded")
+        if verbose:
+            print("Beta Table Loaded")
         beta_df = beta_df.set_index("time")
         beta_df.index = pd.to_datetime(beta_df.index)
         beta_df["Month"] = beta_df.index.to_period("M")
     except:
-
-        print("Calculating Beta Table")
+        if verbose:
+            print("Calculating Beta Table")
         if drive:
             id_ = "1Vg9w6RpPjukasvRqxM4cqPxabDi9MeyS"
             folder_name, id_pair = CreatePairFolder(id_, (asset_name_1, asset_name_2))

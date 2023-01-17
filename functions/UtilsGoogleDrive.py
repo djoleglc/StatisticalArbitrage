@@ -112,11 +112,8 @@ def SaveUploadResultStrategy(
     result, asset_name_1, asset_name_2, idx, drive=True, output_folder="H:"
 ):
     folder_name = f"{asset_name_1}_{asset_name_2}"
-    path_result = f"{folder_name}.joblib"
+    path_result = os.path.join(output_folder, f"{folder_name}/{folder_name}.joblib")
     joblib.dump(result, path_result)
-    if output_folder is not None:
-        shutil.move(path_result, f"{output_folder}")
-        path_result = f"{output_folder}/{path_result}"
 
     if drive:
         files = FilesAvailableDrive(idx)

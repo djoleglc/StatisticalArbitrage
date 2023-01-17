@@ -8,7 +8,7 @@
     "list_assets_path": "config/NamesCoinsAvailable.joblib",
     "dates_interval": [
         "2020-12",
-        "2021-01"
+        "2021-12"
     ],
     "idx_klines": "1lTqV4UgHsMi7s6mJqDhA1RF5gQf-AG13"
 }
