@@ -567,7 +567,7 @@ def CreatePlot(
     dates = list(result.keys())
     for date in dates:
         df = result[date][0].astype("float")
-
+        
         sns.heatmap(
             df,
             cmap=cmap_reversed,
@@ -575,6 +575,9 @@ def CreatePlot(
             annot=True,
             yticklabels=df.index,
             center=1,
+            robust = False,
+            vmin = 0,
+            vmax = 2,
             fmt=".3g",
         )
         title = f"{asset_name_1} - {asset_name_2}\n{date}"
