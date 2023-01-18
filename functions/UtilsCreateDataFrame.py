@@ -72,6 +72,13 @@ def saveDataFrame(tickers, date, df, output_name=None, output_folder=None):
         df.to_csv(name_to_save)
 
         
+        
+def weighted_df(df, isBuyerMaker, freq):
+    df_ = df.loc[df.isBuyerMaker == isBuyerMaker]
+    df_w = (df_.price * df_.qty).resample(freq).sum() / (df_.qty.resample(freq).sum())
+    return df_w
+
+
 def modifyDataFrameHistTrades(x, frequency):
     """
     function to modify a dataframe and to keep only the price
@@ -88,8 +95,8 @@ def modifyDataFrameHistTrades(x, frequency):
     name, path = x[0], x[1]
     df = LoadDatasetHistTrades(path)
     df_to_keep = df.loc[df.isBestMatch == True]
-    sell = df_to_keep.loc[df.isBuyerMaker == True].price.rename("sell").resample(freq).last()
-    buy = df_to_keep.loc[df.isBuyerMaker == False].price.rename("buy").resample(freq).last()
+    sell = weighted_df(df_to_keep, isBuyerMaker = True, freq = freq).rename("sell")
+    buy = weighted_df(df_to_keep, isBuyerMaker = False, freq = freq).rename("buy")
     merged = pd.merge(buy, sell, left_index = True, right_index = True, how = "inner")
     df_mid = merged.mean(axis = 1).rename(name)
     return df_mid
