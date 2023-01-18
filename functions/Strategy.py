@@ -211,7 +211,7 @@ def getCombRet(
     return month_dict
 
 
-def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
+def borrowCost(df_, short_asset_name, enter_date, exit_date, borrowCost_dict, beta=1):
     """
     function used to calculate the borrowing costs when shorting an asset
     Inputs:
@@ -229,11 +229,10 @@ def borrowCost(df_, short_asset_name, enter_date, exit_date, beta=1):
         - feeToPay: float
                 borrowing fee to pay
     """
-    borrowCost_dict = joblib.load("config/MarginFeeCoins_Dictionary.joblib")
     daily_interest = borrowCost_dict[short_asset_name]
     time_delta = exit_date - enter_date
     hours_borrowed = numpy.ceil(time_delta.total_seconds() / 60 / 60)
-    amount_borrowed = df_.loc[enter_date, short_asset_name]
+    amount_borrowed = beta * df_.loc[enter_date, short_asset_name]
     return daily_interest / 24 * hours_borrowed * amount_borrowed
 
 
@@ -324,7 +323,8 @@ def apply_twosigma(
     state = 0  # initial state
     result = ResultStrategy([], [], [], [], [], [], [], [], [], [])
     isFinaltime = lambda j: (j == len(df) - 2)
-
+    borrowCost_dict = joblib.load("config/MarginFeeCoins_Dictionary.joblib")
+    
     for j, t in enumerate(df.index[:-1]):
         if state == 0:
             if df.loc[t, "spread"] > intercept + (quantile * sigma):
@@ -362,7 +362,7 @@ def apply_twosigma(
         elif state == -1:
             t_ = df.index[j + 1]
 
-            borrow_fee = borrowCost(df__, asset_name_1, enter_pos_date, t_)
+            borrow_fee = borrowCost(df__, asset_name_1, enter_pos_date, t_, borrowCost_dict)
 
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
@@ -403,7 +403,7 @@ def apply_twosigma(
         elif state == 1:
             t_ = df.index[j + 1]
 
-            borrow_fee = borrowCost(df__, asset_name_2, enter_pos_date, t_, beta)
+            borrow_fee = borrowCost(df__, asset_name_2, enter_pos_date, t_, borrowCost_dict, beta)
 
             fee_exit = transactionCost(
                 df__, asset_name_1, asset_name_2, beta, t_, fee=fee_rate
