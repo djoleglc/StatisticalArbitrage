@@ -74,7 +74,7 @@ def create_result_folder(output_folder):
 
 
 def create_pairs(assets_list):
-    pairs = [comb for comb in combinations(assets_list, r=2)]
+    pairs = joblib.load("config/all_pairs.joblib")
     return pairs
 
 
