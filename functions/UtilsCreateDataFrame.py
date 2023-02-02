@@ -231,10 +231,20 @@ def nameFileHistTrades(ticker, date, folder):
 
 
 
-
-
 def loadCleanDataFrame(path):
+    """
+    Load and clean a CSV dataframe from the specified file path.
+
+    Inputs:
+        - path: str
+                The file path of the CSV file.
+
+    Output:
+        - df_: pandas.DataFrame
+                The loaded and cleaned dataframe.
+    """
     df_ = pd.read_csv(path)
     df_ = df_.set_index(pd.to_datetime(df_.time))
     df_.drop(columns=["time"], inplace=True)
     return df_
+
