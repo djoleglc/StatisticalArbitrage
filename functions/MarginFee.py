@@ -68,8 +68,21 @@ def getDictionaryMarginRate(list_names):
 
 
 def checkMarginFeeDict(path_dict, asset_list):
+    """
+    Function to check if the dictionary of margin fees is complete and retrieves missing values.
+    
+    Input:
+      - path_dict: str
+            Path to the dictionary of margin fees.
+      - asset_list: list
+            List of assets to check in the dictionary of margin fees.
+            
+    Output:
+      None
+    """
     d = joblib.load(path_dict)
     to_retrieve = [asset for asset in asset_list if asset not in d]
     to_merge = getDictionaryMarginRate(to_retrieve)
     d.update(to_merge)
     joblib.dump(d, path_dict)
+
