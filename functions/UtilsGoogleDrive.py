@@ -5,6 +5,17 @@ import shutil
 import joblib
 
 def UploadFile(file, folder_id):
+    """
+    Upload a file to a specified Google Drive folder.
+
+    Inputs:
+        - file: str
+                The file path to upload.
+        - folder_id: str
+                The ID of the Google Drive folder to upload the file to.
+
+    Output: None
+    """
     gauth = GoogleAuth()
     drive = GoogleDrive(gauth)
     name_file = file.split("\\")[-1].split("/")[-1]
@@ -12,7 +23,7 @@ def UploadFile(file, folder_id):
     # Read file and set it as the content of this instance.
     gfile["title"] = name_file
     gfile.SetContentFile(file)
-    gfile.Upload()  # Upload the file
+    gfile.Upload()
 
 
 def UploadFileListData(files, folder_id):
