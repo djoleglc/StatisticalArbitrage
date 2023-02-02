@@ -37,31 +37,31 @@ def half_life(series):
 
 
 def p_value_Stationary(x, stat_test="adfuller"):
+    """
+    Compute p-value for stationary test.
+
+    Inputs:
+        - x: pandas.Series
+                The time series data to be tested for stationarity.
+        - stat_test: str (optional)
+                The type of stationary test to perform. Options include "adfuller" (default), "pp", "hurstexponent", and "half_life".
+
+    Output:
+        - p_val: float
+                The p-value for the specified stationary test.
+    """
     if stat_test == "adfuller":
-        """
-        this is a normal pvalue
-        """
         test = adfuller(x, autolag="AIC", regression="ct")
         p_val = test[1]
 
     if stat_test == "pp":
-        """
-        philip pherron test
-        p_val here is a p value
-        """
         result = adfuller(x, maxlag=1, regression="c", autolag=None)
         p_val = result[1]
 
     if stat_test == "hurstexponent":
-        """
-        less than 0.5 is mean reverting
-        """
         p_val = HurstExponent(x)
 
     if stat_test == "half_life":
-        """
-        usually they measure it in days
-        """
         p_val = half_life(x)
 
     return p_val
