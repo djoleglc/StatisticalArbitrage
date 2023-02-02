@@ -73,10 +73,27 @@ def saveDataFrame(tickers, date, df, output_name=None, output_folder=None):
 
         
         
-def weighted_df(df, isBuyerMaker, freq):
+        
+ def weighted_df(df, isBuyerMaker, freq):
+    """
+    Function to calculate the weighted average of a DataFrame.
+    
+    Input:
+      - df: pandas DataFrame
+            The DataFrame to calculate the weighted average from.
+      - isBuyerMaker: bool
+            Filter the DataFrame to only include rows where isBuyerMaker is equal to this value.
+      - freq: str
+            The frequency to resample the DataFrame to before calculating the weighted average.
+            
+    Output:
+      - df_w: pandas DataFrame
+            The weighted average of the filtered and resampled DataFrame.
+    """
     df_ = df.loc[df.isBuyerMaker == isBuyerMaker]
     df_w = (df_.price * df_.qty).resample(freq).sum() / (df_.qty.resample(freq).sum())
     return df_w
+
 
 
 def modifyDataFrameHistTrades(x, frequency):
@@ -100,6 +117,7 @@ def modifyDataFrameHistTrades(x, frequency):
     merged = pd.merge(buy, sell, left_index = True, right_index = True, how = "inner")
     df_mid = merged.mean(axis = 1).rename(name)
     return df_mid
+
 
 def createDataFrame(
     input_folder,
