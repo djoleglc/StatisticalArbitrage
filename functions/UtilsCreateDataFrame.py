@@ -155,27 +155,36 @@ def createDataFrame(
     return df
 
 
-def createUniqueDataFrame(
-    list_dates,
-    input_folder,
-    tickers,
-    n_job=4,
-    to_save=False,
-    output_name=None,
-    output_folder=None,
-    type_ = "klines", 
-    frequency = "1m"
-):
-
-    fun_ = lambda date: createDataFrame(
-        input_folder=input_folder,
-        date=date,
-        tickers=tickers,
-        n_job=n_job,
-        to_save=False,
-        type_ = type_, 
-        frequency = frequency
-    )
+def createUniqueDataFrame(list_dates, input_folder, tickers, n_job=4, to_save=False, 
+                          output_name=None, output_folder=None, type_ = "klines", frequency = "1m"):
+    """
+    Function to concatenate and merge multiple dataframes of multiple tickers
+    into a single unique dataframe. 
+    Inputs:
+        -list_dates: list of str
+                list of dates to consider for the dataframes, e.g. ["2021-01", "2021-02"]
+        -input_folder: str
+                path of the input folder where the dataframes are stored
+        -tickers: list of str
+                list of tickers to consider for the dataframes, e.g. ["BTC", "ETH"]
+        -n_job: int
+                number of jobs to parallelize the process
+        -to_save: bool
+                if True the dataframe will be saved
+        -output_name: str
+                name of the output file to save, if None will use the default naming convention
+        -output_folder: str
+                path of the output folder where the dataframe will be saved, if None will use the input_folder
+        -type_: str
+                type of data to be considered, e.g. "klines"
+        -frequency: str
+                frequency of the data to be considered, e.g. "1m"
+    Output:
+        -unique_df: pandas dataframe
+                unique dataframe of the input dates and tickers
+    """
+    fun_ = lambda date: createDataFrame(input_folder=input_folder, date=date, tickers=tickers, n_job=n_job, 
+                                        to_save=False, type_ = type_, frequency = frequency)
     unique_df = pd.concat([fun_(date) for date in list_dates])
     if to_save:
         first_last_date = list_dates[0] + "_" + list_dates[-1]
