@@ -86,7 +86,7 @@ def create_beta_table(
         df_beta.to_csv(path)
         return df_beta, path
     else:
-        return df_beta
+        return df_beta, None
 
 
 def getCombRet(
