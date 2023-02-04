@@ -131,8 +131,9 @@ def create_pairs(Mconfig):
     """
     pairs = joblib.load("config/all_pairs.joblib")
     if Mconfig["toy"]:
-        # let's take randomly three pairs
-        pairs = random.sample(pairs, 3)
+        pairs = [("ADA", "MATIC"), 
+        ("BNB", "DOGE"), 
+        ("TRX", "LTC")]
     return pairs
 
 
@@ -298,7 +299,7 @@ def load_result(asset_1, asset_2, out_fold):
     return result
 
 
-def plot_example(n, frequency, asset_1, asset_2, result, coin_df, outfolder, save=True):
+def plot_example(frequency, asset_1, asset_2, result, coin_df, outfolder, n = None , save=True):
     """
     Function to plot the example of a trading strategy.
 
@@ -330,7 +331,12 @@ def plot_example(n, frequency, asset_1, asset_2, result, coin_df, outfolder, sav
     xmft = mdates.DateFormatter("%H:%M")
 
     c = 0
-    for j in range(len(trades.beta.unique()[:n])):
+    if n is None:
+        l = len(trades.beta.unique()[:])
+    else: 
+        l = len(trades.beta.unique()[:n])
+
+    for j in range(l):
         c += 1
         beta = trades.beta.unique()[j]
         # print(trades.loc[trades.beta == beta].enter_)
@@ -442,8 +448,8 @@ def main():
     if Mconfig["toy"]:
         if len(dates) >= 3:
             dates_ = dates
-            dates = dates[:3]
-            next_date = dates_[3]
+            dates = dates[:6]
+            next_date = dates_[6]
 
     # Retrieve or load data depending on Mconfig
     if Mconfig["download_clean_data"] == False:
@@ -505,7 +511,7 @@ def main():
 
         
         plot_example(
-            5, frequency, asset_1, asset_2, res, coin_df, path_result, save=True
+             frequency, asset_1, asset_2, res, coin_df, path_result, n =  None, save=True
         )
 
 
