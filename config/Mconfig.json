@@ -5,12 +5,6 @@
     "type_data": "trades",
     "save_dataframe": true,
     "frequency": "1m",  
-    "output_folder": "C:/Users/giova/OneDrive/Desktop/testFolder",
-    "list_assets_path": "config/NamesCoinsAvailable.joblib",
-    "dates_interval": [
-        "2020-12",
-        "2021-12"
-    ],
-    "idx_klines": "1TaIN7sf7qv3u9zwOQ2sqo5S7UvIODnSW",
-    "idx_trades": "1d9zCoDdxfNluxf8bq50-wZu0mbulxOFE"
+    "output_folder": null,
+    "drive": false
 }
