@@ -73,8 +73,7 @@ def saveDataFrame(tickers, date, df, output_name=None, output_folder=None):
 
         
         
-        
- def weighted_df(df, isBuyerMaker, freq):
+def weighted_df(df, isBuyerMaker, freq):
     """
     Function to calculate the weighted average of a DataFrame.
     
